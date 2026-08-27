@@ -1,7 +1,8 @@
 mod model;
 
-use std::{collections::HashMap, env, ffi::OsString, path::PathBuf, println};
+use std::{collections::HashMap, error::Error, fs::{self}, path::PathBuf, println};
 
+use anyhow::Context;
 use booru_rs::{Client, GelbooruClient, prelude::*};
 use clap::Parser;
 
@@ -21,13 +22,24 @@ struct Cli {
 }
 
 #[tokio::main]
-async fn main() -> Result<()> {
+async fn main() -> anyhow::Result<(), Box<dyn Error>> {
     let cli = Cli::parse();
 
-    // TODO: Read from actual file
-    let credential_map : HashMap<&str, Credentials> = toml::from_str("").unwrap();
+    let credentials = cli.credentials;
 
-    println!("{credential_map:?}");
+    // If the credentials path is the default one, create it
+    if credentials == credentials_path(){
+        fs::create_dir_all(credentials_path().parent().unwrap())?
+    }
+
+    let cred_str = fs::read_to_string(&credentials)
+    .with_context(|| format!("Could not find credentials file {}",&credentials.display()))?;
+
+    // Parse the contents of the credentials file
+    let credential_map: HashMap<String, Credentials> = toml::from_str(cred_str.as_str())
+    .with_context(|| format!("Could not parse file {}", &credentials.display()))?;
+
+    println!("Credentials: {credential_map:?}");
 
     // To download a gelbooru image, we'll need to spoof the Referer header in the request,
     // otherwise we'll be redirected to the post
