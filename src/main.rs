@@ -1,12 +1,13 @@
 mod model;
+mod error;
 
-use std::{collections::HashMap, error::Error, fs::{self}, path::PathBuf, println};
+use std::{collections::HashMap, error::Error, fs::{self}, hash::Hash, path::{Path, PathBuf}, println, result, str::FromStr};
 
 use anyhow::Context;
 use booru_rs::{Client, GelbooruClient, prelude::*};
 use clap::Parser;
 
-use crate::model::Credentials;
+use crate::model::{ClientType, Credentials};
 
 #[derive(Parser)]
 #[command(name="booru-cli")]
@@ -22,7 +23,7 @@ struct Cli {
 }
 
 #[tokio::main]
-async fn main() -> anyhow::Result<(), Box<dyn Error>> {
+async fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
 
     let credentials = cli.credentials;
@@ -39,7 +40,11 @@ async fn main() -> anyhow::Result<(), Box<dyn Error>> {
     let credential_map: HashMap<String, Credentials> = toml::from_str(cred_str.as_str())
     .with_context(|| format!("Could not parse file {}", &credentials.display()))?;
 
-    println!("Credentials: {credential_map:?}");
+    let client_type = ClientType::from_str(&cli.client)?;
+    
+    let credentials = credential_map.get(&cli.client)
+    .with_context(|| format!("No credentials found for {}", cli.client))?;
+
 
     // To download a gelbooru image, we'll need to spoof the Referer header in the request,
     // otherwise we'll be redirected to the post
@@ -55,6 +60,14 @@ async fn main() -> anyhow::Result<(), Box<dyn Error>> {
 
     Ok(())
 }
+
+// fn get_builder(client : &str) -> result::Result<ClientBuilder<dyn Client>, Box<dyn Error>> {
+//     match client {
+//         "rule34" => Ok(Rule34Client::builder()),
+//         "gelbooru" => Ok(GelbooruClient::builder()),
+
+//     }
+// }
 
 fn config_dir() -> PathBuf {
     dirs::config_local_dir()
