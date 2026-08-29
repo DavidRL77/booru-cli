@@ -8,7 +8,7 @@ use anyhow::Context;
 use booru_rs::{Client, GelbooruClient, prelude::*};
 use clap::Parser;
 
-use crate::{error::CliError, model::{Credentials}};
+use crate::{client::ClientWrapper, error::CliError, model::Credentials};
 
 #[derive(Parser)]
 #[command(name="booru-cli")]
@@ -67,7 +67,7 @@ async fn main() -> anyhow::Result<()> {
 
 
 fn configure_client<T>(tags: &[String], credentials: Option<&Credentials>) 
--> anyhow::Result<T> 
+-> anyhow::Result<Box<dyn ClientWrapper>> 
 where T : Client
 {
     Ok(T::builder().tags(tags)?.build())
