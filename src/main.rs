@@ -1,14 +1,13 @@
 mod model;
-mod client;
 mod error;
 
-use std::{collections::HashMap, fs::{self}, path::PathBuf, println, option::Option};
+use std::{collections::HashMap, debug_assert, fs::{self}, option::Option, path::PathBuf, println};
 
 use anyhow::Context;
-use booru_rs::{Client, GelbooruClient, prelude::*};
+use booru_rs::{Client, GelbooruClient, Post, prelude::*};
 use clap::Parser;
 
-use crate::{client::ClientWrapper, error::CliError, model::Credentials};
+use crate::{error::CliError, model::Credentials};
 
 #[derive(Parser)]
 #[command(name="booru-cli")]
@@ -17,6 +16,8 @@ use crate::{client::ClientWrapper, error::CliError, model::Credentials};
 struct Cli {
 
     tags: Vec<String>,
+    #[arg(long, short, default_value_t=1)]
+    limit: u32,
     #[arg(long, short, default_value_t="gelbooru".to_string())]
     client: String,
     #[arg(long, default_value=credentials_path().into_os_string())]
@@ -43,22 +44,30 @@ async fn main() -> anyhow::Result<()> {
     
     let credentials = credential_map.get(&cli.client);
 
-
-    let client  = match cli.client.as_str() {
-        "gelbooru" => configure_client::<GelbooruClient>(&cli.tags, credentials),
-        "rule34" => configure_client::<Rule34Client>(&cli.tags, credentials),
+    let posts: Vec<Box<dyn Post>> = match cli.client.as_str() {
+        "gelbooru" => { 
+            configure_client::<GelbooruClient>(cli.tags, cli.limit,
+                credentials, true)?
+            .get().await?
+            .into_iter()
+            .map(|post| Box::new(post) as _)
+            .collect()
+        },
+        "rule34" => {
+            configure_client::<Rule34Client>(cli.tags, cli.limit,
+                credentials, true)?
+            .get().await?
+            .into_iter()
+            .map(|post| Box::new(post) as _)
+            .collect()
+        }
+        _ => return Err(CliError::InvalidArgument(cli.client).into())
     };
 
-    // To download a gelbooru image, we'll need to spoof the Referer header in the request,
-    // otherwise we'll be redirected to the post
-    let booru = GelbooruClient::builder()
-    .tags(cli.tags)?
-    .limit(1)
-    .build();
-
-    let posts = booru.get().await?;
-    for post in &posts {
-        println!("{}", post.file_url);
+    for post in posts {
+        if let Some(url) = post.file_url() {
+            println!("{}", url);
+        }
     }
 
     Ok(())
@@ -66,11 +75,25 @@ async fn main() -> anyhow::Result<()> {
 
 
 
-fn configure_client<T>(tags: &[String], credentials: Option<&Credentials>) 
--> anyhow::Result<Box<dyn ClientWrapper>> 
+fn configure_client<T>(tags: Vec<String>, limit: u32,
+    credentials: Option<&Credentials>, requires_credentials: bool) 
+-> anyhow::Result<T> 
 where T : Client
 {
-    Ok(T::builder().tags(tags)?.build())
+    if requires_credentials && credentials.is_none() {
+        return Err(BooruError::Unauthorized("Credentials required for this client.".into()).into());
+    }
+
+    let mut builder = T::builder().tags(tags)?.limit(limit);
+
+    // Needs to reassign builder since it takes ownership of itself
+    builder = if let Some(c) = credentials {
+        builder.set_credentials(&c.api_key, &c.user_id)
+    } else {
+        builder
+    };
+
+    Ok(builder.build())
 }
 
 fn config_dir() -> PathBuf {
