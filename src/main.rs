@@ -7,7 +7,7 @@ use anyhow::Context;
 use booru_rs::{Client, GelbooruClient, Post, prelude::*};
 use clap::Parser;
 
-use crate::{error::CliError, model::Credentials};
+use crate::{error::CliError, model::{ClientConfig, Credentials}};
 
 #[derive(Parser)]
 #[command(name="booru-cli")]
@@ -42,20 +42,26 @@ async fn main() -> anyhow::Result<()> {
     let credential_map: HashMap<String, Credentials> = toml::from_str(cred_str.as_str())
     .with_context(|| format!("Could not parse file {}", &credentials.display()))?;
     
-    let credentials = credential_map.get(&cli.client);
+    let parsed_credentials = credential_map.get(&cli.client);
+
+    let config = ClientConfig {
+        name: &cli.client,
+        tags: cli.tags,
+        limit: cli.limit,
+        credentials: parsed_credentials,
+        requires_credentials: |_| { true } // Needs better validation
+    };
 
     let posts: Vec<Box<dyn Post>> = match cli.client.as_str() {
         "gelbooru" => { 
-            configure_client::<GelbooruClient>(cli.tags, cli.limit,
-                credentials, true)?
+            config.get_client::<GelbooruClient>()?
             .get().await?
             .into_iter()
             .map(|post| Box::new(post) as _)
             .collect()
         },
         "rule34" => {
-            configure_client::<Rule34Client>(cli.tags, cli.limit,
-                credentials, true)?
+            config.get_client::<Rule34Client>()?
             .get().await?
             .into_iter()
             .map(|post| Box::new(post) as _)
@@ -73,28 +79,6 @@ async fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-
-
-fn configure_client<T>(tags: Vec<String>, limit: u32,
-    credentials: Option<&Credentials>, requires_credentials: bool) 
--> anyhow::Result<T> 
-where T : Client
-{
-    if requires_credentials && credentials.is_none() {
-        return Err(BooruError::Unauthorized("Credentials required for this client.".into()).into());
-    }
-
-    let mut builder = T::builder().tags(tags)?.limit(limit);
-
-    // Needs to reassign builder since it takes ownership of itself
-    builder = if let Some(c) = credentials {
-        builder.set_credentials(&c.api_key, &c.user_id)
-    } else {
-        builder
-    };
-
-    Ok(builder.build())
-}
 
 fn config_dir() -> PathBuf {
     dirs::config_local_dir()
