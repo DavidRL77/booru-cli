@@ -1,6 +1,4 @@
-use std;
-
-use booru_rs::{BooruError, Client, GelbooruClient, Rule34Client};
+use booru_rs::{BooruError, Client, };
 use serde::Deserialize;
 
 #[derive(Deserialize, Debug)]

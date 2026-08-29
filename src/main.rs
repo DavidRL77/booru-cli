@@ -1,7 +1,7 @@
 mod model;
 mod error;
 
-use std::{collections::HashMap, debug_assert, fs::{self}, option::Option, path::PathBuf, println};
+use std::{collections::HashMap, fs::{self}, option::Option, path::PathBuf, println};
 
 use anyhow::Context;
 use booru_rs::{Client, GelbooruClient, Post, prelude::*};
