@@ -53,20 +53,8 @@ async fn main() -> anyhow::Result<()> {
     };
 
     let posts: Vec<Box<dyn Post>> = match cli.client.as_str() {
-        "gelbooru" => { 
-            config.get_client::<GelbooruClient>()?
-            .get().await?
-            .into_iter()
-            .map(|post| Box::new(post) as _)
-            .collect()
-        },
-        "rule34" => {
-            config.get_client::<Rule34Client>()?
-            .get().await?
-            .into_iter()
-            .map(|post| Box::new(post) as _)
-            .collect()
-        }
+        "gelbooru" => config.get_posts::<GelbooruClient>().await?,
+        "rule34" => config.get_posts::<GelbooruClient>().await?,
         _ => return Err(CliError::InvalidArgument(cli.client).into())
     };
 

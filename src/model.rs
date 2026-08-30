@@ -1,4 +1,4 @@
-use booru_rs::{BooruError, Client, };
+use booru_rs::{BooruError, Client, Post, };
 use serde::Deserialize;
 
 #[derive(Deserialize, Debug)]
@@ -16,9 +16,8 @@ pub struct ClientConfig<'a> {
 }
 
 impl ClientConfig<'_> {
-    pub fn get_client<T>(&self)
+    pub fn get_client<T: Client>(&self)
     -> booru_rs::Result<T>
-    where T : Client
     {
         if (self.requires_credentials)(self) && self.credentials.is_none() {
             return Err(BooruError::Unauthorized(
@@ -38,6 +37,20 @@ impl ClientConfig<'_> {
         };
 
         Ok(builder.build())
+    }
+
+    pub async fn get_posts<T>(&self) -> booru_rs::Result<Vec<Box< dyn Post>>>
+    where
+        T: Client,
+        <T as Client>::Post: Post + 'static // Guarantee that this client's post implements the Post trait,
+        // and guarantee that the post lives as long as the box
+    {
+        Ok(self.get_client::<T>()?
+        .get()
+        .await?
+        .into_iter()
+        .map(|post| Box::new(post) as _)
+        .collect())
     }
 
 }
