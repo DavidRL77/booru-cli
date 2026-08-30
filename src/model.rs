@@ -1,5 +1,8 @@
-use booru_rs::{BooruError, Client, Post, };
-use serde::Deserialize;
+use core::fmt;
+
+use booru_rs::{gelbooru::GelbooruRating, rule34::Rule34Rating};
+use serde::{Deserialize, Serialize};
+use clap::ValueEnum;
 
 #[derive(Deserialize, Debug)]
 pub struct Credentials {
@@ -7,50 +10,53 @@ pub struct Credentials {
     pub api_key : String
 }
 
-pub struct ClientConfig<'a> {
-    pub name: &'a str,
-    pub tags: Vec<String>,
-    pub limit: u32,
-    pub credentials: Option<&'a Credentials>,
-    pub requires_credentials: fn(config: &Self) -> bool
+#[derive(Serialize, ValueEnum, Clone, Debug)]
+#[clap(rename_all="lowercase")]
+#[serde(rename_all="lowercase")]
+pub enum ClientType {
+    Gelbooru,
+    Rule34
 }
 
-impl ClientConfig<'_> {
-    pub fn get_client<T: Client>(&self)
-    -> booru_rs::Result<T>
-    {
-        if (self.requires_credentials)(self) && self.credentials.is_none() {
-            return Err(BooruError::Unauthorized(
-                format!("Credentials required for {}.", self.name).into()
-            ).into());
+impl fmt::Display for ClientType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let name = format!("{:?}", self).to_lowercase();
+        return write!(f, "{name}");
+    }
+}
+
+#[derive(Serialize, ValueEnum, Copy, Clone, Debug)]
+#[clap(rename_all="lowercase")]
+#[serde(rename_all="lowercase")]
+pub enum Rating {
+    Safe,
+    Questionable,
+    Explicit
+}
+
+impl fmt::Display for Rating {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let name = format!("{:?}", self).to_lowercase();
+        return write!(f, "{name}");
+    }
+}
+
+impl From<Rating> for GelbooruRating {
+    fn from(value: Rating) -> Self {
+        match value {
+            Rating::Safe => GelbooruRating::General,
+            Rating::Questionable => GelbooruRating::Questionable,
+            Rating::Explicit => GelbooruRating::Explicit
         }
-
-        let mut builder = T::builder()
-        .tags(&self.tags)?
-        .limit(self.limit);
-
-        // Needs to reassign builder since it takes ownership of itself
-        builder = if let Some(c) = self.credentials {
-            builder.set_credentials(&c.api_key, &c.user_id)
-        } else {
-            builder
-        };
-
-        Ok(builder.build())
     }
+}
 
-    pub async fn get_posts<T>(&self) -> booru_rs::Result<Vec<Box< dyn Post>>>
-    where
-        T: Client,
-        <T as Client>::Post: Post + 'static // Guarantee that this client's post implements the Post trait,
-        // and guarantee that the post lives as long as the box
-    {
-        Ok(self.get_client::<T>()?
-        .get()
-        .await?
-        .into_iter()
-        .map(|post| Box::new(post) as _)
-        .collect())
+impl From<Rating> for Rule34Rating {
+    fn from(value: Rating) -> Self {
+        match value {
+            Rating::Safe => Rule34Rating::Safe,
+            Rating::Questionable => Rule34Rating::Questionable,
+            Rating::Explicit => Rule34Rating::Explicit
+        }
     }
-
 }

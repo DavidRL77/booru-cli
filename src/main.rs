@@ -1,15 +1,17 @@
 mod model;
 mod error;
+mod client;
 
 use core::time;
-use std::{collections::HashMap, fs::{self}, option::Option, path::{Path, PathBuf}, println};
+use std::{collections::HashMap, fs::{self}, option::Option, path::PathBuf, println};
+use client::ClientConfig;
 
 use anyhow::Context;
 use booru_rs::{GelbooruClient, Post, prelude::*};
 use clap::Parser;
 use reqwest::header::{self, HeaderMap, HeaderValue};
 
-use crate::{error::CliError, model::{ClientConfig, Credentials}};
+use crate::model::{ClientType, Credentials, Rating};
 
 #[derive(Parser)]
 #[command(name="booru-cli")]
@@ -20,10 +22,12 @@ struct Cli {
     tags: Vec<String>,
     #[arg(long, short, default_value_t=1)]
     limit: u32,
-    #[arg(long, short, default_value_t="gelbooru".to_string())]
-    client: String,
+    #[arg(long, short, default_value_t=ClientType::Gelbooru)]
+    client: ClientType,
     #[arg(long, default_value=credentials_path().into_os_string())]
-    credentials: PathBuf
+    credentials: PathBuf,
+    #[arg(value_enum, long, short)]
+    rating: Option<Rating>
 }
 
 #[tokio::main]
@@ -44,20 +48,20 @@ async fn main() -> anyhow::Result<()> {
     let credential_map: HashMap<String, Credentials> = toml::from_str(cred_str.as_str())
     .with_context(|| format!("Could not parse file {}", &credentials.display()))?;
     
-    let parsed_credentials = credential_map.get(&cli.client);
+    let parsed_credentials = credential_map.get(&cli.client.to_string());
 
     let config = ClientConfig {
-        name: &cli.client,
+        name: &cli.client.to_string(),
         tags: cli.tags,
         limit: cli.limit,
         credentials: parsed_credentials,
-        requires_credentials: |_| { true } // Needs better validation
+        requires_credentials: |_| { true }, // Needs better validation
+        rating: cli.rating
     };
 
-    let posts: Vec<Box<dyn Post>> = match cli.client.as_str() {
-        "gelbooru" => config.get_posts::<GelbooruClient>().await?,
-        "rule34" => config.get_posts::<GelbooruClient>().await?,
-        _ => return Err(CliError::InvalidArgument(cli.client).into())
+    let posts: Vec<Box<dyn Post>> = match cli.client {
+        ClientType::Gelbooru => config.get_posts::<GelbooruClient>().await?,
+        ClientType::Rule34 => config.get_posts::<Rule34Client>().await?
     };
 
     let downloader = Downloader::with_client(
