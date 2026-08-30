@@ -1,11 +1,13 @@
 mod model;
 mod error;
 
-use std::{collections::HashMap, fs::{self}, option::Option, path::PathBuf, println};
+use core::time;
+use std::{collections::HashMap, fs::{self}, option::Option, path::{Path, PathBuf}, println};
 
 use anyhow::Context;
-use booru_rs::{Client, GelbooruClient, Post, prelude::*};
+use booru_rs::{GelbooruClient, Post, prelude::*};
 use clap::Parser;
+use reqwest::header::{self, HeaderMap, HeaderValue};
 
 use crate::{error::CliError, model::{ClientConfig, Credentials}};
 
@@ -58,6 +60,16 @@ async fn main() -> anyhow::Result<()> {
         _ => return Err(CliError::InvalidArgument(cli.client).into())
     };
 
+    let downloader = Downloader::with_client(
+        reqwest::ClientBuilder::new()
+        .timeout(time::Duration::from_secs(300))
+        .default_headers(
+            get_headers()
+        )
+        .build()
+        .expect("Could not build HTTP client")
+    );
+
     for post in posts {
         if let Some(url) = post.file_url() {
             println!("{}", url);
@@ -77,4 +89,11 @@ fn config_dir() -> PathBuf {
 fn credentials_path() -> PathBuf {
     config_dir()
     .join("credentials.toml")
+}
+
+fn get_headers() -> HeaderMap {
+    let mut headers = HeaderMap::new();
+    headers.insert(header::REFERER, 
+        HeaderValue::from_static("https://gelbooru.com"));
+    headers
 }
