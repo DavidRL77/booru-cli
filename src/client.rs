@@ -1,5 +1,5 @@
-use booru_rs::{BooruError, Client, Post, };
-use crate::model::{Credentials, Rating};
+use booru_rs::{BooruError, Client, Post, Sort, };
+use crate::{model::{Credentials, Rating}};
 
 // Basically a wrapper around information all booru clients share,
 // to ease the repetition of creating different clients with the same data.
@@ -9,7 +9,8 @@ pub struct ClientConfig<'a> {
     pub limit: u32,
     pub credentials: Option<&'a Credentials>,
     pub requires_credentials: fn(config: &Self) -> bool,
-    pub rating: Option<Rating>
+    pub rating: Option<Rating>,
+    pub sort: Sort
 }
 
 impl ClientConfig<'_> {
@@ -28,7 +29,8 @@ impl ClientConfig<'_> {
 
         let mut builder = T::builder()
         .tags(&self.tags)?
-        .limit(self.limit);
+        .limit(self.limit)
+        .sort(self.sort);
 
         if let Some(c) = self.credentials {
             // Needs to reassign builder since it takes ownership of itself

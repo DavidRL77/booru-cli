@@ -11,7 +11,7 @@ use booru_rs::{GelbooruClient, Post, prelude::*};
 use clap::Parser;
 use reqwest::header::{self, HeaderMap, HeaderValue};
 
-use crate::model::{ClientType, Credentials, Rating};
+use crate::model::{CliSort, ClientType, Credentials, Rating};
 
 #[derive(Parser)]
 #[command(name="booru-cli")]
@@ -27,7 +27,9 @@ struct Cli {
     #[arg(long, default_value=credentials_path().into_os_string())]
     credentials: PathBuf,
     #[arg(value_enum, long, short)]
-    rating: Option<Rating>
+    rating: Option<Rating>,
+    #[arg(value_enum, long, short, default_value_t=CliSort::Id)]
+    sort: CliSort
 }
 
 #[tokio::main]
@@ -56,7 +58,8 @@ async fn main() -> anyhow::Result<()> {
         limit: cli.limit,
         credentials: parsed_credentials,
         requires_credentials: |_| { true }, // Needs better validation
-        rating: cli.rating
+        rating: cli.rating,
+        sort: cli.sort.into()
     };
 
     let posts: Vec<Box<dyn Post>> = match cli.client {
