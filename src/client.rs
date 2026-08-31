@@ -5,7 +5,7 @@ use crate::{model::{Credentials, CliRating}};
 // to ease the repetition of creating different clients with the same data.
 pub struct ClientConfig<'a> {
     pub name: &'a str,
-    pub tags: Vec<String>,
+    pub tags: &'a Vec<String>,
     pub limit: u32,
     pub credentials: Option<&'a Credentials>,
     pub requires_credentials: fn(config: &Self) -> bool,
@@ -28,7 +28,7 @@ impl ClientConfig<'_> {
         }
 
         let mut builder = T::builder()
-        .tags(&self.tags)?
+        .tags(self.tags)?
         .limit(self.limit)
         .sort(self.sort);
 

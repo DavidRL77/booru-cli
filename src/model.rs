@@ -1,3 +1,5 @@
+pub mod cli;
+
 use std::fmt::Display;
 
 use booru_rs::{Sort, gelbooru::GelbooruRating, rule34::Rule34Rating};
@@ -56,7 +58,7 @@ impl From<CliRating> for Rule34Rating {
 }
 
 // Need to duplicate booru_rs' sort enum to be able to use it as a cli arg
-#[derive(ValueEnum, Clone, Debug)]
+#[derive(ValueEnum, Copy, Clone, Debug)]
 pub enum CliSort {
     /// Sort by post ID.
     Id,

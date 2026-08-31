@@ -1,60 +1,38 @@
 mod model;
-mod error;
 mod client;
 
 use core::time;
-use std::{collections::HashMap, dbg, fs::{self}, option::Option, path::PathBuf, println};
+use std::{collections::HashMap, fs::{self}, path::PathBuf, println};
+use clap::Parser;
 use client::ClientConfig;
 
 use anyhow::Context;
 use booru_rs::{GelbooruClient, Post, prelude::*};
-use clap::Parser;
 use reqwest::header::{self, HeaderMap, HeaderValue};
 
-use crate::model::{CliSort, ClientType, Credentials, CliRating};
-
-#[derive(Parser, Debug)]
-#[command(name="booru-cli")]
-#[command(version="0.1-alpha")]
-#[command(about="Command line tool to interact with various boorus.")]
-struct Cli {
-
-    tags: Vec<String>,
-    #[arg(long, short, default_value_t=1)]
-    limit: u32,
-    #[arg(value_enum, long, short, default_value_t=ClientType::Gelbooru)]
-    client: ClientType,
-    #[arg(value_enum, long, short)]
-    rating: Option<CliRating>,
-    #[arg(value_enum, long, short, default_value_t=CliSort::Id)]
-    sort: CliSort,
-    #[arg(long, default_value=credentials_path().into_os_string())]
-    credentials: PathBuf,
-}
+use crate::model::{ClientType, Credentials, cli::{Cli, Commands}};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
     
-    let credentials = cli.credentials;
-
     // If the credentials path is the default one, create it
-    if credentials == credentials_path(){
+    if cli.credentials == credentials_path(){
         fs::create_dir_all(credentials_path().parent().unwrap())?
     }
 
-    let cred_str = fs::read_to_string(&credentials)
-    .with_context(|| format!("Could not find credentials file {}",&credentials.display()))?;
+    let cred_str = fs::read_to_string(&cli.credentials)
+    .with_context(|| format!("Could not find credentials file {}",&cli.credentials.display()))?;
 
     // Parse the contents of the credentials file
     let credential_map: HashMap<String, Credentials> = toml::from_str(cred_str.as_str())
-    .with_context(|| format!("Could not parse file {}", &credentials.display()))?;
+    .with_context(|| format!("Could not parse file {}", &cli.credentials.display()))?;
     
     let parsed_credentials = credential_map.get(&cli.client.to_string());
 
     let config = ClientConfig {
         name: &cli.client.to_string(),
-        tags: cli.tags,
+        tags: &cli.tags,
         limit: cli.limit,
         credentials: parsed_credentials,
         requires_credentials: |_| { true }, // Needs better validation
@@ -67,25 +45,35 @@ async fn main() -> anyhow::Result<()> {
         ClientType::Rule34 => config.get_posts::<Rule34Client>().await?
     };
 
-    let downloader = Downloader::with_client(
-        reqwest::ClientBuilder::new()
-        .timeout(time::Duration::from_secs(300))
-        .default_headers(
-            get_headers()
-        )
-        .build()
-        .expect("Could not build HTTP client")
-    );
-
     for post in posts {
-        if let Some(url) = post.file_url() {
-            println!("{}", url);
+        match cli.command {
+            Commands::Url => command_url(post, &cli),
+            Commands::Download => command_download(post, &cli),
         }
     }
 
     Ok(())
 }
 
+fn command_url(post: Box<dyn Post>, cli: &Cli) {
+    if let Some(url) = post.file_url() {
+            println!("{}", url);
+    }
+}
+
+fn command_download(post: Box<dyn Post>, cli: &Cli) {
+    let downloader = Downloader::with_client(
+        reqwest::ClientBuilder::new()
+        .timeout(time::Duration::from_secs(300))
+        .default_headers(
+            referer_header(referer_url(cli.client))
+        )
+        .build()
+        .expect("Could not build HTTP client")
+    );
+
+
+}
 
 fn config_dir() -> PathBuf {
     dirs::config_local_dir()
@@ -98,9 +86,16 @@ fn credentials_path() -> PathBuf {
     .join("credentials.toml")
 }
 
-fn get_headers() -> HeaderMap {
+fn referer_header(src: &'static str) -> HeaderMap {
     let mut headers = HeaderMap::new();
     headers.insert(header::REFERER, 
-        HeaderValue::from_static("https://gelbooru.com"));
+        HeaderValue::from_static(src));
     headers
+}
+
+fn referer_url(client: ClientType) -> &'static str {
+    match client {
+        ClientType::Gelbooru => "https://gelbooru.com",
+        _ => ""
+    }
 }
