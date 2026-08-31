@@ -3,7 +3,7 @@ mod error;
 mod client;
 
 use core::time;
-use std::{collections::HashMap, fs::{self}, option::Option, path::PathBuf, println};
+use std::{collections::HashMap, dbg, fs::{self}, option::Option, path::PathBuf, println};
 use client::ClientConfig;
 
 use anyhow::Context;
@@ -11,9 +11,9 @@ use booru_rs::{GelbooruClient, Post, prelude::*};
 use clap::Parser;
 use reqwest::header::{self, HeaderMap, HeaderValue};
 
-use crate::model::{CliSort, ClientType, Credentials, Rating};
+use crate::model::{CliSort, ClientType, Credentials, CliRating};
 
-#[derive(Parser)]
+#[derive(Parser, Debug)]
 #[command(name="booru-cli")]
 #[command(version="0.1-alpha")]
 #[command(about="Command line tool to interact with various boorus.")]
@@ -22,20 +22,20 @@ struct Cli {
     tags: Vec<String>,
     #[arg(long, short, default_value_t=1)]
     limit: u32,
-    #[arg(long, short, default_value_t=ClientType::Gelbooru)]
+    #[arg(value_enum, long, short, default_value_t=ClientType::Gelbooru)]
     client: ClientType,
+    #[arg(value_enum, long, short)]
+    rating: Option<CliRating>,
+    #[arg(value_enum, long, short, default_value_t=CliSort::Id)]
+    sort: CliSort,
     #[arg(long, default_value=credentials_path().into_os_string())]
     credentials: PathBuf,
-    #[arg(value_enum, long, short)]
-    rating: Option<Rating>,
-    #[arg(value_enum, long, short, default_value_t=CliSort::Id)]
-    sort: CliSort
 }
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
-
+    
     let credentials = cli.credentials;
 
     // If the credentials path is the default one, create it

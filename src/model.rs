@@ -1,7 +1,7 @@
-use core::fmt;
+use std::fmt::Display;
 
 use booru_rs::{Sort, gelbooru::GelbooruRating, rule34::Rule34Rating};
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize};
 use clap::ValueEnum;
 
 #[derive(Deserialize, Debug)]
@@ -10,24 +10,23 @@ pub struct Credentials {
     pub api_key : String
 }
 
-#[derive(ValueEnum, Clone, Debug)]
+#[derive(ValueEnum, Copy, Clone, Debug)]
 #[clap(rename_all="lowercase")]
 pub enum ClientType {
     Gelbooru,
     Rule34
 }
 
-impl fmt::Display for ClientType {
+impl Display for ClientType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let name = format!("{:?}", self).to_lowercase();
-        return write!(f, "{name}");
+        return write!(f, "{}", name);
     }
 }
 
-#[derive(Serialize, ValueEnum, Copy, Clone, Debug)]
+#[derive(ValueEnum, Copy, Clone, Debug)]
 #[clap(rename_all="lowercase")]
-#[serde(rename_all="lowercase")]
-pub enum Rating {
+pub enum CliRating {
     /// Nothing sexual, safe to watch in public
     Safe,
     /// No explicit sex, but may contain nudity
@@ -36,29 +35,22 @@ pub enum Rating {
     Explicit
 }
 
-impl fmt::Display for Rating {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let name = format!("{:?}", self).to_lowercase();
-        return write!(f, "{name}");
-    }
-}
-
-impl From<Rating> for GelbooruRating {
-    fn from(value: Rating) -> Self {
+impl From<CliRating> for GelbooruRating {
+    fn from(value: CliRating) -> Self {
         match value {
-            Rating::Safe => GelbooruRating::General,
-            Rating::Questionable => GelbooruRating::Questionable,
-            Rating::Explicit => GelbooruRating::Explicit
+            CliRating::Safe => GelbooruRating::General,
+            CliRating::Questionable => GelbooruRating::Questionable,
+            CliRating::Explicit => GelbooruRating::Explicit
         }
     }
 }
 
-impl From<Rating> for Rule34Rating {
-    fn from(value: Rating) -> Self {
+impl From<CliRating> for Rule34Rating {
+    fn from(value: CliRating) -> Self {
         match value {
-            Rating::Safe => Rule34Rating::Safe,
-            Rating::Questionable => Rule34Rating::Questionable,
-            Rating::Explicit => Rule34Rating::Explicit
+            CliRating::Safe => Rule34Rating::Safe,
+            CliRating::Questionable => Rule34Rating::Questionable,
+            CliRating::Explicit => Rule34Rating::Explicit
         }
     }
 }
@@ -84,13 +76,6 @@ pub enum CliSort {
     Updated,
     /// Random ordering.
     Random,
-}
-
-impl fmt::Display for CliSort {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let name = format!("{:?}", self).to_lowercase();
-        return write!(f, "{name}");
-    }
 }
 
 impl From<CliSort> for Sort {

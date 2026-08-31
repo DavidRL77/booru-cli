@@ -1,5 +1,5 @@
 use booru_rs::{BooruError, Client, Post, Sort, };
-use crate::{model::{Credentials, Rating}};
+use crate::{model::{Credentials, CliRating}};
 
 // Basically a wrapper around information all booru clients share,
 // to ease the repetition of creating different clients with the same data.
@@ -9,7 +9,7 @@ pub struct ClientConfig<'a> {
     pub limit: u32,
     pub credentials: Option<&'a Credentials>,
     pub requires_credentials: fn(config: &Self) -> bool,
-    pub rating: Option<Rating>,
+    pub rating: Option<CliRating>,
     pub sort: Sort
 }
 
@@ -19,7 +19,7 @@ impl ClientConfig<'_> {
     where 
         T: Client,
         // Make sure we can convert from our custom Rating to the client's
-        <T as booru_rs::Client>::Rating: From<Rating>
+        <T as booru_rs::Client>::Rating: From<CliRating>
     {
         if (self.requires_credentials)(self) && self.credentials.is_none() {
             return Err(BooruError::Unauthorized(
@@ -47,7 +47,7 @@ impl ClientConfig<'_> {
     pub async fn get_posts<T>(&self) -> booru_rs::Result<Vec<Box< dyn Post>>>
     where
         T: Client,
-        <T as booru_rs::Client>::Rating: From<Rating>,
+        <T as booru_rs::Client>::Rating: From<CliRating>,
         // Guarantee that this client's post implements the Post trait,
         // and guarantee that the post lives as long as its box
         <T as Client>::Post: Post + 'static, 
