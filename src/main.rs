@@ -17,8 +17,8 @@ async fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
     
     // If the credentials path is the default one, create it
-    if cli.credentials == credentials_path(){
-        fs::create_dir_all(credentials_path().parent().unwrap())?
+    if cli.credentials == model::cli::credentials_path(){
+        tokio::fs::create_dir_all(model::cli::credentials_path().parent().unwrap()).await?
     }
 
     let cred_str = fs::read_to_string(&cli.credentials)
@@ -47,43 +47,43 @@ async fn main() -> anyhow::Result<()> {
 
     for post in posts {
         match cli.command {
-            Commands::Url => command_url(post, &cli),
-            Commands::Download => command_download(post, &cli),
+            Commands::Url => command_url(post),
+            Commands::Download {
+                ref destination
+            } => command_download(post, cli.client, destination).await?,
         }
     }
 
     Ok(())
 }
 
-fn command_url(post: Box<dyn Post>, cli: &Cli) {
+fn command_url(post: Box<dyn Post>) {
     if let Some(url) = post.file_url() {
             println!("{}", url);
     }
 }
 
-fn command_download(post: Box<dyn Post>, cli: &Cli) {
+async fn command_download(post: Box<dyn Post>, client: ClientType, destination: &PathBuf) 
+-> std::result::Result<(), BooruError>
+{
     let downloader = Downloader::with_client(
         reqwest::ClientBuilder::new()
         .timeout(time::Duration::from_secs(300))
         .default_headers(
-            referer_header(referer_url(cli.client))
+            referer_header(referer_url(client))
         )
         .build()
         .expect("Could not build HTTP client")
     );
 
+    if let Some(url) = post.file_url() {
+        let download_result = downloader
+        .download_url(url, &destination, None).await?;
+        
+        println!("{}", download_result.path.display());
+    }
 
-}
-
-fn config_dir() -> PathBuf {
-    dirs::config_local_dir()
-    .unwrap()
-    .join("booru-cli")
-}
-
-fn credentials_path() -> PathBuf {
-    config_dir()
-    .join("credentials.toml")
+    Ok(())
 }
 
 fn referer_header(src: &'static str) -> HeaderMap {

@@ -2,7 +2,6 @@ use std::path::PathBuf;
 
 use clap::{Parser, Subcommand};
 
-use crate::credentials_path;
 use crate::model::{CliRating, CliSort, ClientType};
 
 #[derive(Parser, Debug)]
@@ -10,7 +9,8 @@ use crate::model::{CliRating, CliSort, ClientType};
 #[command(version="0.1-alpha")]
 #[command(about="Command line tool to interact with various booru apis.")]
 pub struct Cli {
-
+    /// Tags specified multiple times, or separated by comma
+    #[arg(long, short, value_delimiter=',')]
     pub tags: Vec<String>,
     /// Number of posts to return
     #[arg(long, short, default_value_t=1)]
@@ -34,5 +34,24 @@ pub enum Commands {
     /// Print image url of post to stdout
     Url,
     /// Downloads the image file and prints its path to stdout
-    Download
+    Download {
+        #[arg(long, default_value=temp_dir().into_os_string())]
+        destination: PathBuf
+    }
+}
+
+pub fn config_dir() -> PathBuf {
+    dirs::config_local_dir()
+    .unwrap()
+    .join("booru-cli")
+}
+
+pub fn credentials_path() -> PathBuf {
+    config_dir()
+    .join("credentials.toml")
+}
+
+pub fn temp_dir() -> PathBuf {
+    std::env::temp_dir()
+    .join("booru-cli")
 }
