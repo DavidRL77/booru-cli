@@ -10,19 +10,19 @@ use crate::model::{CliRating, CliSort, ClientType};
 #[command(about="Command line tool to interact with various booru apis.")]
 pub struct Cli {
     /// Tags specified multiple times, or separated by comma
-    #[arg(long, short, value_delimiter=',')]
+    #[arg(long, short, value_delimiter=',', global=true)]
     pub tags: Vec<String>,
     /// Number of posts to return
-    #[arg(long, short, default_value_t=1)]
+    #[arg(long, short, default_value_t=1, global=true)]
     pub limit: u32,
-    #[arg(value_enum, long, short, default_value_t=ClientType::Gelbooru)]
+    #[arg(value_enum, long, short, default_value_t=ClientType::Gelbooru, global=true)]
     pub client: ClientType,
-    #[arg(value_enum, long, short)]
+    #[arg(value_enum, long, short, global=true)]
     pub rating: Option<CliRating>,
-    #[arg(value_enum, long, short, default_value_t=CliSort::Id)]
+    #[arg(value_enum, long, short, default_value_t=CliSort::Id, global=true)]
     pub sort: CliSort,
     /// Path to credentials in toml format
-    #[arg(long, default_value=credentials_path().into_os_string())]
+    #[arg(long, default_value=credentials_path().into_os_string(), global=true)]
     pub credentials: PathBuf,
 
     #[command(subcommand)]
