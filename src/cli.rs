@@ -1,13 +1,13 @@
 pub mod model;
 
 use core::time;
-use std::path::PathBuf;
+use std::{path::PathBuf, format};
 
 use crate::client::{referer_header,referer_url};
 use crate::dirs::*;
 use anyhow::{Ok, Result};
 use booru_rs::{Post, download::Downloader};
-use clap::{Parser, Subcommand};
+use clap::{ArgAction, Parser, Subcommand};
 use serde_json::{json};
 
 use crate::cli::model::{CliRating, CliSort, ClientType};
@@ -49,7 +49,11 @@ pub enum Commands {
         #[arg(long, default_value=temp_dir().into_os_string())]
         destination: PathBuf
     },
-    Json
+    Json {
+        /// Print json without pretty formatting
+        #[arg(long="no-pretty", default_value_t=true, action=ArgAction::SetFalse)]
+        pretty: bool
+    }
 }
 
 
@@ -62,8 +66,8 @@ impl Commands {
             => self.url(post),
             Commands::Download { destination }
             => self.download(post, cli, destination).await,
-            Commands::Json
-            => self.json(post) 
+            Commands::Json { pretty }
+            => self.json(post, *pretty) 
         }
     }
 
@@ -96,7 +100,7 @@ impl Commands {
         Ok(None)
     }
 
-    fn json(&self, post: &dyn Post)
+    fn json(&self, post: &dyn Post, pretty: bool)
     -> anyhow::Result<Option<String>>
     {
         // No way to serialize a trait, so I'll just do it myself
@@ -105,12 +109,18 @@ impl Commands {
             "width": &post.width(),
             "height": &post.height(),
             "file_url": &post.file_url(),
-            "tags": &post.tags(),
+            "tags": &post.tags().split(' ').collect::<Vec<_>>(),
             "score": &post.score(),
             "md5": &post.md5(),
             "source": &post.source()
         });
 
-        Ok(Some(value.to_string()))
+        let string: String = if pretty {
+            format!("{:#}", value)
+        } else {
+            format!("{}", value)
+        };
+
+        Ok(Some(string))
     }
 }
