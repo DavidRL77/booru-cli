@@ -9,9 +9,12 @@ use crate::model::{CliRating, CliSort, ClientType};
 #[command(version="0.1-alpha")]
 #[command(about="Command line tool to interact with various booru apis.")]
 pub struct Cli {
-    /// Tags specified multiple times, or separated by comma
+    /// Tags to include, separated by comma or specified multiple times
     #[arg(long, short, value_delimiter=',', global=true)]
     pub tags: Vec<String>,
+    /// Tags to exclude, separated by comma or specified multiple times
+    #[arg(long, short='T', value_delimiter=',', global=true)]
+    pub blacklist: Vec<String>,
     /// Number of posts to return
     #[arg(long, short, default_value_t=1, global=true)]
     pub limit: u32,

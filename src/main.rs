@@ -33,6 +33,7 @@ async fn main() -> anyhow::Result<()> {
     let config = ClientConfig {
         name: &cli.client.to_string(),
         tags: &cli.tags,
+        blacklist: &cli.blacklist,
         limit: cli.limit,
         credentials: parsed_credentials,
         requires_credentials: |_| { true }, // Needs better validation

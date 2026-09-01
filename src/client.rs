@@ -6,6 +6,7 @@ use crate::{model::{Credentials, CliRating}};
 pub struct ClientConfig<'a> {
     pub name: &'a str,
     pub tags: &'a Vec<String>,
+    pub blacklist: &'a Vec<String>,
     pub limit: u32,
     pub credentials: Option<&'a Credentials>,
     pub requires_credentials: fn(config: &Self) -> bool,
@@ -29,6 +30,7 @@ impl ClientConfig<'_> {
 
         let mut builder = T::builder()
         .tags(self.tags)?
+        .blacklist_tags(self.blacklist)
         .limit(self.limit)
         .sort(self.sort);
 
