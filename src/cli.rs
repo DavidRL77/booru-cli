@@ -5,9 +5,10 @@ use std::path::PathBuf;
 
 use crate::client::{referer_header,referer_url};
 use crate::dirs::*;
-use anyhow::Result;
+use anyhow::{Ok, Result};
 use booru_rs::{Post, download::Downloader};
 use clap::{Parser, Subcommand};
+use serde_json::{json};
 
 use crate::cli::model::{CliRating, CliSort, ClientType};
 
@@ -47,7 +48,8 @@ pub enum Commands {
     Download {
         #[arg(long, default_value=temp_dir().into_os_string())]
         destination: PathBuf
-    }
+    },
+    Json
 }
 
 
@@ -56,9 +58,12 @@ impl Commands {
     -> Result<Option<String>>
     {
         match self {
-            Commands::Url => self.url(post),
+            Commands::Url 
+            => self.url(post),
             Commands::Download { destination }
-            => self.download(post, cli, destination).await
+            => self.download(post, cli, destination).await,
+            Commands::Json
+            => self.json(post) 
         }
     }
 
@@ -89,5 +94,23 @@ impl Commands {
         }
 
         Ok(None)
+    }
+
+    fn json(&self, post: &dyn Post)
+    -> anyhow::Result<Option<String>>
+    {
+        // No way to serialize a trait, so I'll just do it myself
+        let value = json!({
+            "id": &post.id(),
+            "width": &post.width(),
+            "height": &post.height(),
+            "file_url": &post.file_url(),
+            "tags": &post.tags(),
+            "score": &post.score(),
+            "md5": &post.md5(),
+            "source": &post.source()
+        });
+
+        Ok(Some(value.to_string()))
     }
 }

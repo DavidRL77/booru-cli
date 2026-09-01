@@ -48,7 +48,6 @@ async fn main() -> anyhow::Result<()> {
 
     for post in posts {
         let result= cli.command.execute(post.as_ref(), &cli).await?;
-
         if let Some(r) = result {
             println!("{}", r);
         }
