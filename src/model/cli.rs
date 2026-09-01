@@ -1,5 +1,6 @@
 use std::path::PathBuf;
 
+use crate::dirs::*;
 use clap::{Parser, Subcommand};
 
 use crate::model::{CliRating, CliSort, ClientType};
@@ -37,24 +38,11 @@ pub enum Commands {
     /// Print image url of post to stdout
     Url,
     /// Downloads the image file and prints its path to stdout
-    Download {
-        #[arg(long, default_value=temp_dir().into_os_string())]
-        destination: PathBuf
-    }
+    Download(Download)
 }
 
-pub fn config_dir() -> PathBuf {
-    dirs::config_local_dir()
-    .unwrap()
-    .join("booru-cli")
-}
-
-pub fn credentials_path() -> PathBuf {
-    config_dir()
-    .join("credentials.toml")
-}
-
-pub fn temp_dir() -> PathBuf {
-    std::env::temp_dir()
-    .join("booru-cli")
+#[derive(Parser, Debug)]
+pub struct Download {
+    #[arg(long, default_value=temp_dir().into_os_string())]
+    pub destination: PathBuf
 }

@@ -1,8 +1,10 @@
 mod model;
+mod dirs;
 mod client;
 
+use crate::dirs::*;
 use core::time;
-use std::{collections::HashMap, fs::{self}, path::PathBuf, println};
+use std::{collections::HashMap, fs::{self}, println};
 use clap::Parser;
 use client::ClientConfig;
 
@@ -10,15 +12,15 @@ use anyhow::Context;
 use booru_rs::{GelbooruClient, Post, prelude::*};
 use reqwest::header::{self, HeaderMap, HeaderValue};
 
-use crate::model::{ClientType, Credentials, cli::{Cli, Commands}};
+use crate::model::{ClientType, Credentials, cli::{Cli, Commands, Download}};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
     
     // If the credentials path is the default one, create it
-    if cli.credentials == model::cli::credentials_path(){
-        tokio::fs::create_dir_all(model::cli::credentials_path().parent().unwrap()).await?
+    if cli.credentials == credentials_path(){
+        tokio::fs::create_dir_all(credentials_path().parent().unwrap()).await?
     }
 
     let cred_str = fs::read_to_string(&cli.credentials)
@@ -47,25 +49,31 @@ async fn main() -> anyhow::Result<()> {
     };
 
     for post in posts {
-        match cli.command {
-            Commands::Url => command_url(post),
-            Commands::Download {
-                ref destination
-            } => command_download(post, cli.client, destination).await?,
+        let result = match cli.command {
+            Commands::Url 
+            => command_url(post),
+            Commands::Download(ref args) 
+            => command_download(post, cli.client, args).await?,
+        };
+
+        if let Some(r) = result {
+            println!("{}", r);
         }
     }
 
     Ok(())
 }
 
-fn command_url(post: Box<dyn Post>) {
+fn command_url(post: Box<dyn Post>) -> Option<String> {
     if let Some(url) = post.file_url() {
-            println!("{}", url);
+            return Some(url.to_string());
     }
+
+    None
 }
 
-async fn command_download(post: Box<dyn Post>, client: ClientType, destination: &PathBuf) 
--> std::result::Result<(), BooruError>
+async fn command_download(post: Box<dyn Post>, client: ClientType, args: &Download)
+-> std::result::Result<Option<String>, BooruError>
 {
     let downloader = Downloader::with_client(
         reqwest::ClientBuilder::new()
@@ -79,12 +87,12 @@ async fn command_download(post: Box<dyn Post>, client: ClientType, destination: 
 
     if let Some(url) = post.file_url() {
         let download_result = downloader
-        .download_url(url, &destination, None).await?;
+        .download_url(url, &args.destination, None).await?;
         
-        println!("{}", download_result.path.display());
+        return Ok(Some(download_result.path.display().to_string()));
     }
 
-    Ok(())
+    Ok(None)
 }
 
 fn referer_header(src: &'static str) -> HeaderMap {
