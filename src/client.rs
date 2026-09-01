@@ -1,5 +1,6 @@
 use booru_rs::{BooruError, Client, Post, Sort, };
-use crate::{model::{Credentials, CliRating}};
+use reqwest::header::{self, HeaderMap, HeaderValue};
+use crate::cli::model::{CliRating, ClientType, Credentials};
 
 // Basically a wrapper around information all booru clients share,
 // to ease the repetition of creating different clients with the same data.
@@ -62,4 +63,18 @@ impl ClientConfig<'_> {
         .collect())
     }
 
+}
+
+pub fn referer_header(src: &'static str) -> HeaderMap {
+    let mut headers = HeaderMap::new();
+    headers.insert(header::REFERER, 
+        HeaderValue::from_static(src));
+    headers
+}
+
+pub fn referer_url(client: ClientType) -> &'static str {
+    match client {
+        ClientType::Gelbooru => "https://gelbooru.com",
+        _ => ""
+    }
 }

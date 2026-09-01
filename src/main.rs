@@ -1,18 +1,16 @@
-mod model;
+mod cli;
 mod dirs;
 mod client;
 
 use crate::dirs::*;
-use core::time;
 use std::{collections::HashMap, fs::{self}, println};
 use clap::Parser;
 use client::ClientConfig;
 
 use anyhow::Context;
 use booru_rs::{GelbooruClient, Post, prelude::*};
-use reqwest::header::{self, HeaderMap, HeaderValue};
 
-use crate::model::{ClientType, Credentials, cli::{Cli, Commands, Download}};
+use crate::cli::{Cli, model::{ClientType, Credentials}};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -49,12 +47,7 @@ async fn main() -> anyhow::Result<()> {
     };
 
     for post in posts {
-        let result = match cli.command {
-            Commands::Url 
-            => command_url(post),
-            Commands::Download(ref args) 
-            => command_download(post, cli.client, args).await?,
-        };
+        let result= cli.command.execute(post.as_ref(), &cli).await?;
 
         if let Some(r) = result {
             println!("{}", r);
@@ -62,49 +55,4 @@ async fn main() -> anyhow::Result<()> {
     }
 
     Ok(())
-}
-
-fn command_url(post: Box<dyn Post>) -> Option<String> {
-    if let Some(url) = post.file_url() {
-            return Some(url.to_string());
-    }
-
-    None
-}
-
-async fn command_download(post: Box<dyn Post>, client: ClientType, args: &Download)
--> std::result::Result<Option<String>, BooruError>
-{
-    let downloader = Downloader::with_client(
-        reqwest::ClientBuilder::new()
-        .timeout(time::Duration::from_secs(300))
-        .default_headers(
-            referer_header(referer_url(client))
-        )
-        .build()
-        .expect("Could not build HTTP client")
-    );
-
-    if let Some(url) = post.file_url() {
-        let download_result = downloader
-        .download_url(url, &args.destination, None).await?;
-        
-        return Ok(Some(download_result.path.display().to_string()));
-    }
-
-    Ok(None)
-}
-
-fn referer_header(src: &'static str) -> HeaderMap {
-    let mut headers = HeaderMap::new();
-    headers.insert(header::REFERER, 
-        HeaderValue::from_static(src));
-    headers
-}
-
-fn referer_url(client: ClientType) -> &'static str {
-    match client {
-        ClientType::Gelbooru => "https://gelbooru.com",
-        _ => ""
-    }
 }

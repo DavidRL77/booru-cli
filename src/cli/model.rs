@@ -1,5 +1,3 @@
-pub mod cli;
-
 use std::fmt::Display;
 
 use booru_rs::{Sort, gelbooru::GelbooruRating, rule34::Rule34Rating};
