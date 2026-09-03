@@ -17,7 +17,7 @@ type CommandResult = anyhow::Result<Vec<String>>;
 #[derive(Parser, Debug)]
 #[command(name="booru-cli")]
 #[command(version="0.1-alpha")]
-#[command(about="Command line tool to interact with various booru apis.")]
+#[command(about="Command line tool to interact with various booru APIs.")]
 pub struct Cli {
     #[command(subcommand)]
     pub command: Commands
