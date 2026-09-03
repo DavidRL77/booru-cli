@@ -1,8 +1,10 @@
-use std::fmt::Display;
+use std::{collections::HashMap, fmt::Display, path::Path};
 
+use anyhow::Context;
 use booru_rs::{Sort, gelbooru::GelbooruRating, rule34::Rule34Rating};
 use serde::{Deserialize};
 use clap::ValueEnum;
+use crate::dirs;
 
 #[derive(Deserialize, Debug)]
 pub struct Credentials {
@@ -10,11 +12,50 @@ pub struct Credentials {
     pub api_key : String
 }
 
+impl Credentials {
+    pub fn load(path: impl AsRef<Path>, key: &str) -> 
+    anyhow::Result<Option<Self>>
+    {
+        let path = path.as_ref();
+
+        // If the specified path is the same as the default, try to create it
+        if path == dirs::credentials_path() {
+            std::fs::create_dir_all(dirs::credentials_path().parent().unwrap())?
+        }
+
+        let cred_str = match std::fs::read_to_string(path) {
+            Ok(value) => value,
+            Err(err) if err.kind() == std::io::ErrorKind::NotFound => { // Return none only if no file is found
+                return Ok(None);
+            },
+            Err(err) => return Err(err.into())
+        };
+
+        // Parse the contents of the credentials file
+        let mut credential_map: HashMap<String, Self> = toml::from_str(cred_str.as_str())
+        .with_context(|| format!("Could not parse file {}", path.display()))?;
+
+        // Remove the value from the map so we can own and return it
+        let parsed_credentials = credential_map.remove(key);
+
+        Ok(parsed_credentials)
+    }
+}
+
 #[derive(ValueEnum, Copy, Clone, Debug)]
 #[clap(rename_all="lowercase")]
 pub enum ClientType {
     Gelbooru,
     Rule34
+}
+
+impl ClientType {
+    pub fn requires_auth(&self) -> bool {
+        match self {
+            ClientType::Gelbooru => true,
+            ClientType::Rule34 => true
+        }
+    }
 }
 
 impl Display for ClientType {
