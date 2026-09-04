@@ -6,6 +6,7 @@ use std::{path::PathBuf, format};
 use crate::client::{ClientConfig, referer_header, referer_url};
 use crate::dirs::*;
 use anyhow::{Ok};
+use booru_rs::{Autocomplete, GelbooruClient, Rule34Client, SafebooruClient};
 use booru_rs::{Post, download::Downloader};
 use clap::{ArgAction, Args, Parser, Subcommand};
 use serde_json::{json};
@@ -31,7 +32,7 @@ pub struct ClientArgs {
     /// Tags to exclude, separated by comma or specified multiple times
     #[arg(long, short='T', value_delimiter=',', global=true)]
     pub blacklist: Vec<String>,
-    /// Number of posts to fetch
+    /// Max posts to fetch
     #[arg(long, short, default_value_t=1, global=true)]
     pub limit: u32,
     #[arg(value_enum, long, short, default_value_t=ClientType::Safebooru, global=true)]
@@ -73,6 +74,17 @@ pub enum Commands {
         #[arg(long="no-pretty", default_value_t=true, action=ArgAction::SetFalse)]
         pretty: bool
     },
+    /// Get autocomplete results for tags based on a query
+    Tags {
+        query: String,
+
+        #[arg(value_enum, long, short, default_value_t=ClientType::Safebooru)]
+        client: ClientType,
+
+        /// Max results to fetch
+        #[arg(long, short, default_value_t=20)]
+        limit: u32
+    },
     /// Delete this app's temp files (useful for systems that don't clear its own temp folder)
     ClearTemp
 }
@@ -90,6 +102,8 @@ impl Commands {
             => Self::download(client_args, &destination, clear).await,
             Commands::Json {client_args, pretty }
             => Self::json(client_args, pretty).await,
+            Commands::Tags { client, query, limit}
+            => Self::tags(client, query, limit).await,
             Commands::ClearTemp
             => Self::clear_temp().await
         }
@@ -164,6 +178,23 @@ impl Commands {
         };
 
         Ok(vec![string])
+    }
+
+    async fn tags(client: ClientType, query: String, limit: u32)
+    -> CommandResult
+    {
+        let suggestions = match client {
+            ClientType::Safebooru => SafebooruClient::autocomplete(&query, limit).await?,
+            ClientType::Gelbooru => GelbooruClient::autocomplete(&query, limit).await?,
+            ClientType::Rule34 => Rule34Client::autocomplete(&query, limit).await?
+        };
+
+        let mut result: Vec<String> = Vec::new();
+        for suggestion in suggestions {
+            result.push(suggestion.name);
+        }
+
+        Ok(result)
     }
 
     /// Delete all files in this app's temp directory.

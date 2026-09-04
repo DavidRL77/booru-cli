@@ -80,11 +80,11 @@ impl ClientConfig {
         ClientType::Safebooru => self.get_posts_generic::<SafebooruClient>().await,
         ClientType::Gelbooru => self.get_posts_generic::<GelbooruClient>().await,
         ClientType::Rule34 => self.get_posts_generic::<Rule34Client>().await
-
     }
 }
 
 }
+
 
 pub fn referer_header(src: &'static str) -> HeaderMap {
     let mut headers = HeaderMap::new();
