@@ -34,7 +34,7 @@ pub struct ClientArgs {
     /// Number of posts to fetch
     #[arg(long, short, default_value_t=1, global=true)]
     pub limit: u32,
-    #[arg(value_enum, long, short, default_value_t=ClientType::Gelbooru, global=true)]
+    #[arg(value_enum, long, short, default_value_t=ClientType::Safebooru, global=true)]
     pub client: ClientType,
     #[arg(value_enum, long, short, global=true)]
     pub rating: Option<CliRating>,

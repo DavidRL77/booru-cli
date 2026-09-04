@@ -1,4 +1,4 @@
-use booru_rs::{BooruError, Client, GelbooruClient, Post, Rule34Client, Sort, };
+use booru_rs::{BooruError, Client, GelbooruClient, Post, Rule34Client, SafebooruClient, Sort, };
 use reqwest::header::{self, HeaderMap, HeaderValue};
 use crate::cli::{ClientArgs, model::{CliRating, ClientType, Credentials}};
 
@@ -77,6 +77,7 @@ impl ClientConfig {
     /// mapping it to a dynamic list of posts
     pub async fn get_posts(&self) -> booru_rs::Result<Vec<Box< dyn Post>>> {
     match self.client {
+        ClientType::Safebooru => self.get_posts_generic::<SafebooruClient>().await,
         ClientType::Gelbooru => self.get_posts_generic::<GelbooruClient>().await,
         ClientType::Rule34 => self.get_posts_generic::<Rule34Client>().await
 

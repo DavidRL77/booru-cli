@@ -1,7 +1,7 @@
 use std::{collections::HashMap, fmt::Display, path::Path};
 
 use anyhow::Context;
-use booru_rs::{Sort, gelbooru::GelbooruRating, rule34::Rule34Rating};
+use booru_rs::{Sort, gelbooru::GelbooruRating, rule34::Rule34Rating, safebooru::SafebooruRating};
 use serde::{Deserialize};
 use clap::ValueEnum;
 use crate::dirs;
@@ -45,6 +45,7 @@ impl Credentials {
 #[derive(ValueEnum, Copy, Clone, Debug)]
 #[clap(rename_all="lowercase")]
 pub enum ClientType {
+    Safebooru,
     Gelbooru,
     Rule34
 }
@@ -52,6 +53,7 @@ pub enum ClientType {
 impl ClientType {
     pub fn requires_auth(&self) -> bool {
         match self {
+            ClientType::Safebooru => false,
             ClientType::Gelbooru => true,
             ClientType::Rule34 => true
         }
@@ -92,6 +94,16 @@ impl From<CliRating> for Rule34Rating {
             CliRating::Safe => Rule34Rating::Safe,
             CliRating::Questionable => Rule34Rating::Questionable,
             CliRating::Explicit => Rule34Rating::Explicit
+        }
+    }
+}
+
+impl From<CliRating> for SafebooruRating {
+    fn from(value: CliRating) -> Self {
+        match value {
+            CliRating::Safe => SafebooruRating::Safe,
+            CliRating::Questionable => SafebooruRating::Questionable,
+            CliRating::Explicit => SafebooruRating::Explicit
         }
     }
 }
