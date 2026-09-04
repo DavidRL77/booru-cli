@@ -18,6 +18,9 @@ More clients may be implemented in the future.
 These features are made with scripting and automation in mind so they can be passed or piped into other programs. For example, one could query a post's height or width using [jq](https://jqlang.org/), or open an image url directly in-terminal using [timg](https://github.com/hzeller/timg).
 > **Note:** Gelbooru urls can't be displayed directly and have to be downloaded first.
 
+## Installation
+No official way to install just yet, but you can build it from source in the meantime.
+
 ## Examples
 Print the url of a single, random image that:
 - Includes the tag: `smile`
