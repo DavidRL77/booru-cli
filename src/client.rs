@@ -11,7 +11,8 @@ pub struct ClientConfig {
     pub limit: u32,
     pub credentials: Option<Credentials>,
     pub rating: Option<CliRating>,
-    pub sort: Sort
+    pub sort: Sort,
+    pub page: u32
 }
 
 impl ClientConfig {
@@ -23,7 +24,8 @@ impl ClientConfig {
             limit: client_args.limit,
             credentials: Credentials::load(client_args.credentials, &client_args.client.to_string())?,
             rating: client_args.rating,
-            sort: client_args.sort.into()
+            sort: client_args.sort.into(),
+            page: client_args.page
         })
     }
 
@@ -44,7 +46,8 @@ impl ClientConfig {
         .tags(&self.tags)?
         .blacklist_tags(&self.blacklist)
         .limit(self.limit)
-        .sort(self.sort);
+        .sort(self.sort)
+        .page(self.page);
 
         if let Some(c) = &self.credentials {
             // Needs to reassign builder since it takes ownership of itself

@@ -40,6 +40,8 @@ pub struct ClientArgs {
     pub rating: Option<CliRating>,
     #[arg(value_enum, long, short, default_value_t=CliSort::Id, global=true)]
     pub sort: CliSort,
+    #[arg(long, short, default_value_t=0, global=true)]
+    pub page: u32,
     /// Path to api credentials in toml format
     #[arg(long, default_value=credentials_path().into_os_string(), global=true)]
     pub credentials: PathBuf,
