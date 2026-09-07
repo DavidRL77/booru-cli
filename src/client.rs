@@ -3,7 +3,7 @@ use crate::cli::{
     model::{CliRating, ClientType, Credentials},
 };
 use booru_rs::{
-    BooruError, Client, Post, Sort,
+    BooruError, Post, Sort,
     client::{gelbooru, rule34, safebooru},
 };
 use reqwest::header::{self, HeaderMap, HeaderValue};
