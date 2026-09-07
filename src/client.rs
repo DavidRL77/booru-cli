@@ -1,4 +1,4 @@
-use booru_rs::{BooruError, Client, GelbooruClient, Post, Rule34Client, SafebooruClient, Sort, };
+use booru_rs::{BooruError, Client, Post, Sort, client::{gelbooru, rule34, safebooru}, };
 use reqwest::header::{self, HeaderMap, HeaderValue};
 use crate::cli::{ClientArgs, model::{CliRating, ClientType, Credentials}};
 
@@ -29,64 +29,69 @@ impl ClientConfig {
         })
     }
 
-    fn get_client_generic<T>(&self)
-    -> booru_rs::Result<T> 
-    where 
-        T: Client,
-        // Make sure we can convert from our custom Rating to the client's
-        <T as booru_rs::Client>::Rating: From<CliRating>
-    {
-        if self.client.requires_auth() && self.credentials.is_none() {
-            return Err(BooruError::Unauthorized(
-                format!("Credentials required for {}.", self.client).into()
-            ).into());
-        }
-
-        let mut builder = T::builder()
-        .tags(&self.tags)?
-        .blacklist_tags(&self.blacklist)
-        .limit(self.limit)
-        .sort(self.sort)
-        .page(self.page);
-
-        if let Some(c) = &self.credentials {
-            // Needs to reassign builder since it takes ownership of itself
-            builder = builder.set_credentials(&c.api_key, &c.user_id)
-        }
-
-        if let Some(r) = self.rating {
-            builder = builder.rating(r.into())
-        }
-
-        Ok(builder.build())
-    }
-
-    async fn get_posts_generic<T>(&self) -> booru_rs::Result<Vec<Box< dyn Post>>>
+    async fn get_posts_generic<C>(client: &C, query: C::Query) -> booru_rs::Result<Vec<Box< dyn Post>>>
     where
-        T: Client,
-        <T as booru_rs::Client>::Rating: From<CliRating>,
-        // Guarantee that this client's post implements the Post trait,
-        // and guarantee that the post lives as long as its box
-        <T as Client>::Post: Post + 'static, 
+        C: Client,
+        C::Post: 'static
     {
-        Ok(self.get_client_generic::<T>()?
-        .get()
-        .await?
+        let page = client.page(query, None).await?;
+        Ok(page.posts
         .into_iter()
         .map(|post| Box::new(post) as _)
         .collect())
     }
+
+    fn get_required_credentials(&self) -> booru_rs::Result<&Credentials>{
+        match &self.credentials {
+            Some(credentials) => Ok(credentials),
+            None => Err(BooruError::Unauthorized(
+                format!("Credentials required for {}.", self.client)
+            ))
+        }
+    }
+
     /// Matches the ClientType to fetch a list of posts from the appropriate client,
     /// mapping it to a dynamic list of posts
     pub async fn get_posts(&self) -> booru_rs::Result<Vec<Box< dyn Post>>> {
-    match self.client {
-        ClientType::Safebooru => self.get_posts_generic::<SafebooruClient>().await,
-        ClientType::Gelbooru => self.get_posts_generic::<GelbooruClient>().await,
-        ClientType::Rule34 => self.get_posts_generic::<Rule34Client>().await
+        match self.client {
+            ClientType::Safebooru => {
+                let builder = safebooru::Client::builder().build()?;
+                let query = safebooru::Query::new()
+                .tags(&self.tags)
+                .blacklist_tags(&self.blacklist)
+                .limit(self.limit)
+                .sort(self.sort);
 
+                Self::get_posts_generic(&builder, query).await
+            }
+            ClientType::Gelbooru => {
+                let credentials = self.get_required_credentials()?;
+                let client = gelbooru::Client::builder()
+                .set_credentials(&credentials.api_key, &credentials.user_id)
+                .build()?;
+                let query = gelbooru::Query::new()
+                .tags(&self.tags)
+                .blacklist_tags(&self.blacklist)
+                .limit(self.limit)
+                .sort(self.sort);
+
+                Self::get_posts_generic(&client, query).await
+            }
+            ClientType::Rule34 => {
+                let credentials = self.get_required_credentials()?;
+                let client = rule34::Client::builder()
+                .set_credentials(&credentials.api_key, &credentials.user_id)
+                .build()?;
+                let query = rule34::Query::new()
+                .tags(&self.tags)
+                .blacklist_tags(&self.blacklist)
+                .limit(self.limit)
+                .sort(self.sort);
+
+                Self::get_posts_generic(&client, query).await
+            }
+        }
     }
-}
-
 }
 
 pub fn referer_header(src: &'static str) -> HeaderMap {

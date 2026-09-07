@@ -50,16 +50,6 @@ pub enum ClientType {
     Rule34
 }
 
-impl ClientType {
-    pub fn requires_auth(&self) -> bool {
-        match self {
-            ClientType::Safebooru => false,
-            ClientType::Gelbooru => true,
-            ClientType::Rule34 => true
-        }
-    }
-}
-
 impl Display for ClientType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let name = format!("{:?}", self).to_lowercase();
