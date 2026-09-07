@@ -29,18 +29,6 @@ impl ClientConfig {
         })
     }
 
-    async fn get_posts_generic<C>(client: &C, query: C::Query) -> booru_rs::Result<Vec<Box< dyn Post>>>
-    where
-        C: Client,
-        C::Post: 'static
-    {
-        let page = client.page(query, None).await?;
-        Ok(page.posts
-        .into_iter()
-        .map(|post| Box::new(post) as _)
-        .collect())
-    }
-
     fn get_required_credentials(&self) -> booru_rs::Result<&Credentials>{
         match &self.credentials {
             Some(credentials) => Ok(credentials),
@@ -55,44 +43,73 @@ impl ClientConfig {
     pub async fn get_posts(&self) -> booru_rs::Result<Vec<Box< dyn Post>>> {
         match self.client {
             ClientType::Safebooru => {
-                let builder = safebooru::Client::builder().build()?;
-                let query = safebooru::Query::new()
+                let client = safebooru::Client::builder().build()?;
+                
+                let mut search = client.search()
                 .tags(&self.tags)
                 .blacklist_tags(&self.blacklist)
                 .limit(self.limit)
-                .sort(self.sort);
+                .sort(self.sort)
+                .start_page(self.page);
 
-                Self::get_posts_generic(&builder, query).await
+                if let Some(rating) = self.rating {
+                    search = search.rating(rating.into());
+                }
+
+                Ok(box_posts(search.send().await?))
             }
             ClientType::Gelbooru => {
                 let credentials = self.get_required_credentials()?;
                 let client = gelbooru::Client::builder()
                 .set_credentials(&credentials.api_key, &credentials.user_id)
                 .build()?;
-                let query = gelbooru::Query::new()
+
+                let mut search = client.search()
                 .tags(&self.tags)
                 .blacklist_tags(&self.blacklist)
                 .limit(self.limit)
-                .sort(self.sort);
+                .sort(self.sort)
+                .start_page(self.page);
 
-                Self::get_posts_generic(&client, query).await
+                if let Some(rating) = self.rating {
+                    search = search.rating(rating.into());
+                }
+
+                Ok(box_posts(search.send().await?))
             }
             ClientType::Rule34 => {
                 let credentials = self.get_required_credentials()?;
                 let client = rule34::Client::builder()
                 .set_credentials(&credentials.api_key, &credentials.user_id)
                 .build()?;
-                let query = rule34::Query::new()
+
+                let mut search = client.search()
                 .tags(&self.tags)
                 .blacklist_tags(&self.blacklist)
                 .limit(self.limit)
-                .sort(self.sort);
+                .sort(self.sort)
+                .start_page(self.page);
 
-                Self::get_posts_generic(&client, query).await
+                if let Some(rating) = self.rating {
+                    search = search.rating(rating.into());
+                }
+
+                Ok(box_posts(search.send().await?))
             }
         }
     }
 }
+
+fn box_posts<I, P>(posts: I) -> Vec<Box< dyn Post>>
+where
+    I: IntoIterator<Item = P>,
+    P: Post + 'static
+    {
+        posts
+        .into_iter()
+        .map(|post| Box::new(post) as _)
+        .collect()
+    }
 
 pub fn referer_header(src: &'static str) -> HeaderMap {
     let mut headers = HeaderMap::new();
