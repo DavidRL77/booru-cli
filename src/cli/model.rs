@@ -1,21 +1,19 @@
 use std::{collections::HashMap, fmt::Display, path::Path};
 
+use crate::dirs;
 use anyhow::Context;
 use booru_rs::{Sort, gelbooru::GelbooruRating, rule34::Rule34Rating, safebooru::SafebooruRating};
-use serde::{Deserialize};
 use clap::ValueEnum;
-use crate::dirs;
+use serde::Deserialize;
 
 #[derive(Deserialize, Debug)]
 pub struct Credentials {
-    pub user_id : String,
-    pub api_key : String
+    pub user_id: String,
+    pub api_key: String,
 }
 
 impl Credentials {
-    pub fn load(path: impl AsRef<Path>, key: &str) -> 
-    anyhow::Result<Option<Self>>
-    {
+    pub fn load(path: impl AsRef<Path>, key: &str) -> anyhow::Result<Option<Self>> {
         let path = path.as_ref();
 
         // If the specified path is the same as the default, try to create it
@@ -25,15 +23,16 @@ impl Credentials {
 
         let cred_str = match std::fs::read_to_string(path) {
             Ok(value) => value,
-            Err(err) if err.kind() == std::io::ErrorKind::NotFound => { // Return none only if no file is found
+            Err(err) if err.kind() == std::io::ErrorKind::NotFound => {
+                // Return none only if no file is found
                 return Ok(None);
-            },
-            Err(err) => return Err(err.into())
+            }
+            Err(err) => return Err(err.into()),
         };
 
         // Parse the contents of the credentials file
         let mut credential_map: HashMap<String, Self> = toml::from_str(cred_str.as_str())
-        .with_context(|| format!("Could not parse file {}", path.display()))?;
+            .with_context(|| format!("Could not parse file {}", path.display()))?;
 
         // Remove the value from the map so we can own and return it
         let parsed_credentials = credential_map.remove(key);
@@ -43,11 +42,11 @@ impl Credentials {
 }
 
 #[derive(ValueEnum, Copy, Clone, Debug)]
-#[clap(rename_all="lowercase")]
+#[clap(rename_all = "lowercase")]
 pub enum ClientType {
     Safebooru,
     Gelbooru,
-    Rule34
+    Rule34,
 }
 
 impl Display for ClientType {
@@ -58,14 +57,14 @@ impl Display for ClientType {
 }
 
 #[derive(ValueEnum, Copy, Clone, Debug)]
-#[clap(rename_all="lowercase")]
+#[clap(rename_all = "lowercase")]
 pub enum CliRating {
     /// Nothing sexual, safe to watch in public
     Safe,
     /// No explicit sex, but may contain nudity
     Questionable,
     /// Sex
-    Explicit
+    Explicit,
 }
 
 impl From<CliRating> for GelbooruRating {
@@ -73,7 +72,7 @@ impl From<CliRating> for GelbooruRating {
         match value {
             CliRating::Safe => GelbooruRating::General,
             CliRating::Questionable => GelbooruRating::Questionable,
-            CliRating::Explicit => GelbooruRating::Explicit
+            CliRating::Explicit => GelbooruRating::Explicit,
         }
     }
 }
@@ -83,7 +82,7 @@ impl From<CliRating> for Rule34Rating {
         match value {
             CliRating::Safe => Rule34Rating::Safe,
             CliRating::Questionable => Rule34Rating::Questionable,
-            CliRating::Explicit => Rule34Rating::Explicit
+            CliRating::Explicit => Rule34Rating::Explicit,
         }
     }
 }
@@ -93,7 +92,7 @@ impl From<CliRating> for SafebooruRating {
         match value {
             CliRating::Safe => SafebooruRating::Safe,
             CliRating::Questionable => SafebooruRating::Questionable,
-            CliRating::Explicit => SafebooruRating::Explicit
+            CliRating::Explicit => SafebooruRating::Explicit,
         }
     }
 }
@@ -136,4 +135,3 @@ impl From<CliSort> for Sort {
         }
     }
 }
-

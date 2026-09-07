@@ -1,11 +1,10 @@
 mod cli;
-mod dirs;
 mod client;
+mod dirs;
 
 use clap::Parser;
 
-
-use crate::cli::{Cli};
+use crate::cli::Cli;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
