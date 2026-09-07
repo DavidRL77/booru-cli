@@ -51,11 +51,9 @@ impl ClientConfig {
     /// Matches the ClientType to fetch a list of posts from the appropriate client,
     /// mapping it to a dynamic list of posts
     pub async fn get_posts(&self) -> booru_rs::Result<Vec<Box<dyn Post>>> {
-        match self.client {
-            ClientType::Safebooru => {
-                let client = safebooru::Client::builder().build()?;
-
-                let mut search = client
+        macro_rules! configure_search {
+            ($client:expr) => {{
+                let mut search = $client
                     .search()
                     .tags(&self.tags)
                     .blacklist_tags(&self.blacklist)
@@ -66,6 +64,15 @@ impl ClientConfig {
                 if let Some(rating) = self.rating {
                     search = search.rating(rating.into());
                 }
+
+                search
+            }};
+        }
+
+        match self.client {
+            ClientType::Safebooru => {
+                let client = safebooru::Client::builder().build()?;
+                let search = configure_search!(client);
 
                 Ok(box_posts(search.send().await?))
             }
@@ -74,18 +81,7 @@ impl ClientConfig {
                 let client = gelbooru::Client::builder()
                     .set_credentials(&credentials.api_key, &credentials.user_id)
                     .build()?;
-
-                let mut search = client
-                    .search()
-                    .tags(&self.tags)
-                    .blacklist_tags(&self.blacklist)
-                    .limit(self.limit)
-                    .sort(self.sort)
-                    .start_page(self.page);
-
-                if let Some(rating) = self.rating {
-                    search = search.rating(rating.into());
-                }
+                let search = configure_search!(client);
 
                 Ok(box_posts(search.send().await?))
             }
@@ -94,18 +90,7 @@ impl ClientConfig {
                 let client = rule34::Client::builder()
                     .set_credentials(&credentials.api_key, &credentials.user_id)
                     .build()?;
-
-                let mut search = client
-                    .search()
-                    .tags(&self.tags)
-                    .blacklist_tags(&self.blacklist)
-                    .limit(self.limit)
-                    .sort(self.sort)
-                    .start_page(self.page);
-
-                if let Some(rating) = self.rating {
-                    search = search.rating(rating.into());
-                }
+                let search = configure_search!(client);
 
                 Ok(box_posts(search.send().await?))
             }
