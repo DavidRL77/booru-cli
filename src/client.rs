@@ -106,7 +106,6 @@ where
     posts.into_iter().map(|post| Box::new(post) as _).collect()
 }
 
-
 pub fn referer_header(src: &'static str) -> HeaderMap {
     let mut headers = HeaderMap::new();
     headers.insert(header::REFERER, HeaderValue::from_static(src));
