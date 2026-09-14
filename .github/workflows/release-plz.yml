@@ -1,0 +1,52 @@
+name: Release-plz
+
+on:
+    push:
+        branches: [ 'main' ]
+
+permissions: {}
+
+jobs:
+    release:
+        name: Publish release
+        runs-on: ubuntu-latest
+        if: ${{ github.repository_owner == 'DavidRL77' }}
+        permissions:
+            contents: read
+            id-token: write
+        steps:
+        -   uses: actions/checkout@v7
+            with:
+                fetch-depth: 0
+                persist-credentials: false
+        -   uses: dtolnay/rust-toolchain@stable
+        -   name: Publish release
+            uses: release-plz/action@v0.5
+            with:
+                command: release
+            env:
+                GITHUB_TOKEN: ${{ secrets.RELEASE_PLZ_TOKEN }}
+
+    release-pr:
+        name: Update or create PR
+        runs-on: ubuntu-latest
+        if: ${{ github.repository_owner == 'DavidRL77' }}
+        permissions:
+            contents: read
+        concurrency:
+            group: release-plz-${{ github.ref }}
+            cancel-in-progress: false
+        steps:
+        -   uses: actions/checkout@v7
+            with:
+                fetch-depth: 0
+                persist-credentials: false
+        -   uses: dtolnay/rust-toolchain@stable
+        -   uses: release-plz/action@v0.5
+            with:
+                command: release-pr
+            env: 
+                GITHUB_TOKEN: ${{ secrets.RELEASE_PLZ_TOKEN }}
+
+            
+            

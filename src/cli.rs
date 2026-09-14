@@ -75,6 +75,17 @@ pub enum Commands {
         #[arg(long="no-pretty", default_value_t=true, action=ArgAction::SetFalse)]
         pretty: bool,
     },
+    /// Get autocomplete results for tags based on a query
+    Tags {
+        query: String,
+
+        #[arg(value_enum, long, short, default_value_t=ClientType::Safebooru)]
+        client: ClientType,
+
+        /// Max results to fetch
+        #[arg(long, short, default_value_t=20)]
+        limit: u32
+    },
     /// Delete this app's temp files (useful for systems that don't clear its own temp folder)
     ClearTemp,
 }
@@ -161,6 +172,23 @@ impl Commands {
         };
 
         Ok(vec![string])
+    }
+
+    async fn tags(client: ClientType, query: String, limit: u32)
+    -> CommandResult
+    {
+        let suggestions = match client {
+            ClientType::Safebooru => SafebooruClient::autocomplete(&query, limit).await?,
+            ClientType::Gelbooru => GelbooruClient::autocomplete(&query, limit).await?,
+            ClientType::Rule34 => Rule34Client::autocomplete(&query, limit).await?
+        };
+
+        let mut result: Vec<String> = Vec::new();
+        for suggestion in suggestions {
+            result.push(suggestion.name);
+        }
+
+        Ok(result)
     }
 
     /// Delete all files in this app's temp directory.
