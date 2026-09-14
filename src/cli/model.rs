@@ -2,7 +2,7 @@ use std::{collections::HashMap, fmt::Display, path::Path};
 
 use crate::dirs;
 use anyhow::Context;
-use booru_rs::{Sort, gelbooru::GelbooruRating, rule34::Rule34Rating, safebooru::SafebooruRating};
+use booru_rs::{Sort, gelbooru::GelbooruRating, konachan::KonachanRating, rule34::Rule34Rating, safebooru::SafebooruRating};
 use clap::ValueEnum;
 use serde::Deserialize;
 
@@ -47,6 +47,7 @@ pub enum ClientType {
     Safebooru,
     Gelbooru,
     Rule34,
+    Konachan,
 }
 
 impl Display for ClientType {
@@ -93,6 +94,16 @@ impl From<CliRating> for SafebooruRating {
             CliRating::Safe => SafebooruRating::Safe,
             CliRating::Questionable => SafebooruRating::Questionable,
             CliRating::Explicit => SafebooruRating::Explicit,
+        }
+    }
+}
+
+impl From<CliRating> for KonachanRating {
+    fn from(value: CliRating) -> Self {
+        match value {
+            CliRating::Safe => KonachanRating::Safe,
+            CliRating::Questionable => KonachanRating::Questionable,
+            CliRating::Explicit => KonachanRating::Explicit,
         }
     }
 }
