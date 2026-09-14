@@ -219,7 +219,12 @@ impl Commands {
     /// Delete all files in this app's temp directory.
     /// Returns an empty result.
     async fn clear_temp() -> CommandResult {
-        let mut iter = tokio::fs::read_dir(temp_dir()).await?;
+        let dir = temp_dir();
+        if !dir.exists() {
+            return Ok(Vec::new());
+        }
+
+        let mut iter = tokio::fs::read_dir(dir).await?;
         while let Some(d) = iter.next_entry().await? {
             let path = d.path();
             if path.is_file() {

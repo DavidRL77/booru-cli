@@ -5,7 +5,7 @@ use crate::cli::{
 
 use booru_rs::{
     BooruError, Post, Sort,
-    client::{gelbooru, rule34, safebooru, konachan},
+    client::{gelbooru, konachan, rule34, safebooru},
 };
 use reqwest::header::{self, HeaderMap, HeaderValue};
 
@@ -94,7 +94,7 @@ impl ClientConfig {
                 let search = configure_search!(client);
 
                 Ok(box_posts(search.send().await?))
-            },
+            }
             ClientType::Konachan => {
                 let client = konachan::Client::builder().build()?;
 
