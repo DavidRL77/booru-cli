@@ -7,5 +7,4 @@ release_always=false
 
 # Temp fix until booru-rs 2.0 is released to crates
 # Reason is that git dependencies can't be uploaded to crates.io
-publish=false
 git_only=true
