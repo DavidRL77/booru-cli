@@ -6,7 +6,7 @@ use std::{format, path::PathBuf};
 use crate::client::{ClientConfig, referer_header, referer_url};
 use crate::dirs::*;
 use anyhow::Ok;
-use booru_rs::client::{gelbooru, rule34, safebooru};
+use booru_rs::client::{gelbooru, konachan, rule34, safebooru};
 use booru_rs::{Post, download::Downloader};
 use clap::{ArgAction, Args, Parser, Subcommand};
 use serde_json::json;
@@ -182,9 +182,30 @@ impl Commands {
 
     async fn tags(client: ClientType, query: String, limit: u32) -> CommandResult {
         let suggestions = match client {
-            ClientType::Safebooru => safebooru::Client::builder().build()?.autocomplete(&query, limit).await?,
-            ClientType::Gelbooru => gelbooru::Client::builder().build()?.autocomplete(&query, limit).await?,
-            ClientType::Rule34 => rule34::Client::builder().build()?.autocomplete(&query, limit).await?,
+            ClientType::Safebooru => {
+                safebooru::Client::builder()
+                    .build()?
+                    .autocomplete(&query, limit)
+                    .await?
+            }
+            ClientType::Gelbooru => {
+                gelbooru::Client::builder()
+                    .build()?
+                    .autocomplete(&query, limit)
+                    .await?
+            }
+            ClientType::Rule34 => {
+                rule34::Client::builder()
+                    .build()?
+                    .autocomplete(&query, limit)
+                    .await?
+            }
+            ClientType::Konachan => {
+                konachan::Client::builder()
+                    .build()?
+                    .autocomplete(&query, limit)
+                    .await?
+            }
         };
 
         let mut result: Vec<String> = Vec::new();

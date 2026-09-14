@@ -2,9 +2,10 @@ use crate::cli::{
     ClientArgs,
     model::{CliRating, ClientType, Credentials},
 };
+
 use booru_rs::{
     BooruError, Post, Sort,
-    client::{gelbooru, rule34, safebooru},
+    client::{gelbooru, rule34, safebooru, konachan},
 };
 use reqwest::header::{self, HeaderMap, HeaderValue};
 
@@ -90,6 +91,13 @@ impl ClientConfig {
                 let client = rule34::Client::builder()
                     .set_credentials(&credentials.api_key, &credentials.user_id)
                     .build()?;
+                let search = configure_search!(client);
+
+                Ok(box_posts(search.send().await?))
+            },
+            ClientType::Konachan => {
+                let client = konachan::Client::builder().build()?;
+
                 let search = configure_search!(client);
 
                 Ok(box_posts(search.send().await?))
