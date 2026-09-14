@@ -6,6 +6,7 @@ use std::{format, path::PathBuf};
 use crate::client::{ClientConfig, referer_header, referer_url};
 use crate::dirs::*;
 use anyhow::Ok;
+use booru_rs::client::{gelbooru, rule34, safebooru};
 use booru_rs::{Post, download::Downloader};
 use clap::{ArgAction, Args, Parser, Subcommand};
 use serde_json::json;
@@ -75,6 +76,17 @@ pub enum Commands {
         #[arg(long="no-pretty", default_value_t=true, action=ArgAction::SetFalse)]
         pretty: bool,
     },
+    /// Get autocomplete results for tags based on a query
+    Tags {
+        query: String,
+
+        #[arg(value_enum, long, short, default_value_t=ClientType::Safebooru)]
+        client: ClientType,
+
+        /// Max results to fetch
+        #[arg(long, short, default_value_t = 20)]
+        limit: u32,
+    },
     /// Delete this app's temp files (useful for systems that don't clear its own temp folder)
     ClearTemp,
 }
@@ -94,6 +106,11 @@ impl Commands {
                 pretty,
             } => Self::json(client_args, pretty).await,
             Commands::ClearTemp => Self::clear_temp().await,
+            Commands::Tags {
+                query,
+                client,
+                limit,
+            } => Self::tags(client, query, limit).await,
         }
     }
 
@@ -161,6 +178,21 @@ impl Commands {
         };
 
         Ok(vec![string])
+    }
+
+    async fn tags(client: ClientType, query: String, limit: u32) -> CommandResult {
+        let suggestions = match client {
+            ClientType::Safebooru => safebooru::Client::builder().build()?.autocomplete(&query, limit).await?,
+            ClientType::Gelbooru => gelbooru::Client::builder().build()?.autocomplete(&query, limit).await?,
+            ClientType::Rule34 => rule34::Client::builder().build()?.autocomplete(&query, limit).await?,
+        };
+
+        let mut result: Vec<String> = Vec::new();
+        for suggestion in suggestions {
+            result.push(suggestion.name);
+        }
+
+        Ok(result)
     }
 
     /// Delete all files in this app's temp directory.

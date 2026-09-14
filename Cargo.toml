@@ -2,6 +2,11 @@
 name = "booru-cli"
 version = "0.1.0"
 edition = "2024"
+rust-version="1.93"
+description="Command line tool to interact with various booru APIs."
+readme="README.md"
+repository="https://github.com/DavidRL77/booru-cli"
+license="MIT"
 
 [dependencies]
 anyhow = "1.0.104"

@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  push:
+    branches: [ "main" ]
+    paths-ignore:
+      - "LICENSE*"
+      - "**/LICENSE*"
+      - "**.md"
+  pull_request:
+    branches: [ "main" ]
+    paths-ignore:
+      - "LICENSE*"
+      - "**/LICENSE*"
+      - "**.md"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: 0
+  RUST_BACKTRACE: short
+
+jobs:
+  test:
+    name: "Test on ${{ matrix.name }}"
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Linux stable
+            os: ubuntu-latest
+          - name: macOS stable
+            os: macos-latest
+          - name: Windows stable
+            os: windows-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        persist-credentials: false
+    - uses: dtolnay/rust-toolchain@stable
+    - uses: Swatinem/rust-cache@v2
+      with:
+        save-if: ${{ github.ref == 'refs/heads/main' }}
+    - name: Run tests
+      run: cargo test --all-targets --all-features --locked

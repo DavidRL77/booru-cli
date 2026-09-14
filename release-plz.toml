@@ -1,0 +1,6 @@
+[workspace]
+# Let github create the notes for each release
+git_release_generate_notes=true
+git_release_body=""
+# Only release on release PR merge
+release_always=false
