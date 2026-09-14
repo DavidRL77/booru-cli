@@ -2,7 +2,10 @@ use std::{collections::HashMap, fmt::Display, path::Path};
 
 use crate::dirs;
 use anyhow::Context;
-use booru_rs::{Sort, gelbooru::GelbooruRating, konachan::KonachanRating, rule34::Rule34Rating, safebooru::SafebooruRating};
+use booru_rs::{
+    Sort, gelbooru::GelbooruRating, konachan::KonachanRating, rule34::Rule34Rating,
+    safebooru::SafebooruRating,
+};
 use clap::ValueEnum;
 use serde::Deserialize;
 
