@@ -1,6 +1,12 @@
-use booru_rs::{BooruError, Client, GelbooruClient, Post, Rule34Client, SafebooruClient, Sort, };
+use crate::cli::{
+    ClientArgs,
+    model::{CliRating, ClientType, Credentials},
+};
+use booru_rs::{
+    BooruError, Post, Sort,
+    client::{gelbooru, rule34, safebooru},
+};
 use reqwest::header::{self, HeaderMap, HeaderValue};
-use crate::cli::{ClientArgs, model::{CliRating, ClientType, Credentials}};
 
 // Basically a wrapper around information all booru clients share,
 // to ease the repetition of creating different clients with the same data.
@@ -12,7 +18,7 @@ pub struct ClientConfig {
     pub credentials: Option<Credentials>,
     pub rating: Option<CliRating>,
     pub sort: Sort,
-    pub page: u32
+    pub page: u32,
 }
 
 impl ClientConfig {
@@ -22,83 +28,94 @@ impl ClientConfig {
             tags: client_args.tags,
             blacklist: client_args.blacklist,
             limit: client_args.limit,
-            credentials: Credentials::load(client_args.credentials, &client_args.client.to_string())?,
+            credentials: Credentials::load(
+                client_args.credentials,
+                &client_args.client.to_string(),
+            )?,
             rating: client_args.rating,
             sort: client_args.sort.into(),
-            page: client_args.page
+            page: client_args.page,
         })
     }
 
-    fn get_client_generic<T>(&self)
-    -> booru_rs::Result<T> 
-    where 
-        T: Client,
-        // Make sure we can convert from our custom Rating to the client's
-        <T as booru_rs::Client>::Rating: From<CliRating>
-    {
-        if self.client.requires_auth() && self.credentials.is_none() {
-            return Err(BooruError::Unauthorized(
-                format!("Credentials required for {}.", self.client).into()
-            ).into());
+    fn get_required_credentials(&self) -> booru_rs::Result<&Credentials> {
+        match &self.credentials {
+            Some(credentials) => Ok(credentials),
+            None => Err(BooruError::Unauthorized(format!(
+                "Credentials required for {}.",
+                self.client
+            ))),
         }
-
-        let mut builder = T::builder()
-        .tags(&self.tags)?
-        .blacklist_tags(&self.blacklist)
-        .limit(self.limit)
-        .sort(self.sort)
-        .page(self.page);
-
-        if let Some(c) = &self.credentials {
-            // Needs to reassign builder since it takes ownership of itself
-            builder = builder.set_credentials(&c.api_key, &c.user_id)
-        }
-
-        if let Some(r) = self.rating {
-            builder = builder.rating(r.into())
-        }
-
-        Ok(builder.build())
     }
 
-    async fn get_posts_generic<T>(&self) -> booru_rs::Result<Vec<Box< dyn Post>>>
-    where
-        T: Client,
-        <T as booru_rs::Client>::Rating: From<CliRating>,
-        // Guarantee that this client's post implements the Post trait,
-        // and guarantee that the post lives as long as its box
-        <T as Client>::Post: Post + 'static, 
-    {
-        Ok(self.get_client_generic::<T>()?
-        .get()
-        .await?
-        .into_iter()
-        .map(|post| Box::new(post) as _)
-        .collect())
-    }
     /// Matches the ClientType to fetch a list of posts from the appropriate client,
     /// mapping it to a dynamic list of posts
-    pub async fn get_posts(&self) -> booru_rs::Result<Vec<Box< dyn Post>>> {
-    match self.client {
-        ClientType::Safebooru => self.get_posts_generic::<SafebooruClient>().await,
-        ClientType::Gelbooru => self.get_posts_generic::<GelbooruClient>().await,
-        ClientType::Rule34 => self.get_posts_generic::<Rule34Client>().await
+    pub async fn get_posts(&self) -> booru_rs::Result<Vec<Box<dyn Post>>> {
+        macro_rules! configure_search {
+            ($client:expr) => {{
+                let mut search = $client
+                    .search()
+                    .tags(&self.tags)
+                    .blacklist_tags(&self.blacklist)
+                    .limit(self.limit)
+                    .sort(self.sort)
+                    .start_page(self.page);
+
+                if let Some(rating) = self.rating {
+                    search = search.rating(rating.into());
+                }
+
+                search
+            }};
+        }
+
+        match self.client {
+            ClientType::Safebooru => {
+                let client = safebooru::Client::builder().build()?;
+                let search = configure_search!(client);
+
+                Ok(box_posts(search.send().await?))
+            }
+            ClientType::Gelbooru => {
+                let credentials = self.get_required_credentials()?;
+                let client = gelbooru::Client::builder()
+                    .set_credentials(&credentials.api_key, &credentials.user_id)
+                    .build()?;
+                let search = configure_search!(client);
+
+                Ok(box_posts(search.send().await?))
+            }
+            ClientType::Rule34 => {
+                let credentials = self.get_required_credentials()?;
+                let client = rule34::Client::builder()
+                    .set_credentials(&credentials.api_key, &credentials.user_id)
+                    .build()?;
+                let search = configure_search!(client);
+
+                Ok(box_posts(search.send().await?))
+            }
+        }
     }
 }
 
+fn box_posts<I, P>(posts: I) -> Vec<Box<dyn Post>>
+where
+    I: IntoIterator<Item = P>,
+    P: Post + 'static,
+{
+    posts.into_iter().map(|post| Box::new(post) as _).collect()
 }
 
 
 pub fn referer_header(src: &'static str) -> HeaderMap {
     let mut headers = HeaderMap::new();
-    headers.insert(header::REFERER, 
-        HeaderValue::from_static(src));
+    headers.insert(header::REFERER, HeaderValue::from_static(src));
     headers
 }
 
 pub fn referer_url(client: ClientType) -> &'static str {
     match client {
         ClientType::Gelbooru => "https://gelbooru.com",
-        _ => ""
+        _ => "",
     }
 }
