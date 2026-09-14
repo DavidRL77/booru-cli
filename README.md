@@ -7,6 +7,7 @@ A command line interface to fetch posts from booru sites and operate on their da
 | [Safebooru](https://safebooru.org) (default)| **No** |
 | [Gelbooru](https://gelbooru.com) | **Yes** |
 | [Rule34](https://rule34.xxx) | **Yes** |
+| [Konachan](https://konachan.com/) | **No** |
 
 More clients may be implemented in the future.
 
