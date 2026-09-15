@@ -19,7 +19,7 @@ type CommandResult = anyhow::Result<Vec<String>>;
 
 #[derive(Parser, Debug)]
 #[command(name = "booru-cli")]
-#[command(version = "0.1-alpha")]
+#[command(version = clap::crate_version!())]
 #[command(about = "Command line tool to interact with various booru APIs.")]
 pub struct Cli {
     /// Open this command's output with the specified process
