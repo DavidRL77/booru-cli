@@ -1,6 +1,7 @@
 pub mod model;
 
 use core::time;
+use std::path::Path;
 use std::{format, path::PathBuf};
 
 use crate::client::{ClientConfig, referer_header, referer_url};
@@ -8,6 +9,7 @@ use crate::dirs::*;
 use anyhow::Ok;
 use booru_rs::client::{gelbooru, konachan, rule34, safebooru};
 use booru_rs::{Post, download::Downloader};
+use clap::builder::NonEmptyStringValueParser;
 use clap::{ArgAction, Args, Parser, Subcommand};
 use serde_json::json;
 
@@ -17,9 +19,13 @@ type CommandResult = anyhow::Result<Vec<String>>;
 
 #[derive(Parser, Debug)]
 #[command(name = "booru-cli")]
-#[command(version = "0.1-alpha")]
+#[command(version = clap::crate_version!())]
 #[command(about = "Command line tool to interact with various booru APIs.")]
 pub struct Cli {
+    /// Open this command's output with the specified process
+    #[arg(long, global = true, value_name = "PROCESS", value_delimiter = ' ', value_parser=NonEmptyStringValueParser::new())]
+    pub open: Option<Vec<String>>,
+
     #[command(subcommand)]
     pub command: Commands,
 }
@@ -129,11 +135,7 @@ impl Commands {
     }
 
     /// Download each post's file and return a list of its download paths
-    async fn download(
-        client_args: ClientArgs,
-        destination: &PathBuf,
-        clear: bool,
-    ) -> CommandResult {
+    async fn download(client_args: ClientArgs, destination: &Path, clear: bool) -> CommandResult {
         if clear {
             Self::clear_temp().await?;
         }
@@ -243,6 +245,9 @@ impl Commands {
             "width": &post.width(),
             "height": &post.height(),
             "file_url": &post.file_url(),
+            "preview_url": &post.preview_url(),
+            "sample_url": &post.sample_url(),
+            "parent_id": &post.parent_id(),
             "tags": &post.tags().split(' ').collect::<Vec<_>>(),
             "score": &post.score(),
             "md5": &post.md5(),
