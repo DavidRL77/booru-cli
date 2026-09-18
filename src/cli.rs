@@ -92,6 +92,10 @@ pub enum Commands {
         /// Max results to fetch
         #[arg(long, short, default_value_t = 20)]
         limit: u32,
+
+        /// Display count along with tag name
+        #[arg(long)]
+        count: bool,
     },
     /// Delete this app's temp files (useful for systems that don't clear its own temp folder)
     ClearTemp,
@@ -116,7 +120,8 @@ impl Commands {
                 query,
                 client,
                 limit,
-            } => Self::tags(client, query, limit).await,
+                count,
+            } => Self::tags(client, query, limit, count).await,
         }
     }
 
@@ -182,7 +187,7 @@ impl Commands {
         Ok(vec![string])
     }
 
-    async fn tags(client: ClientType, query: String, limit: u32) -> CommandResult {
+    async fn tags(client: ClientType, query: String, limit: u32, count: bool) -> CommandResult {
         let suggestions = match client {
             ClientType::Safebooru => {
                 safebooru::Client::builder()
@@ -212,7 +217,17 @@ impl Commands {
 
         let mut result: Vec<String> = Vec::new();
         for suggestion in suggestions {
-            result.push(suggestion.name);
+            let format = if count {
+                format!(
+                    "{} ({})",
+                    suggestion.name,
+                    suggestion.post_count.unwrap_or(0)
+                )
+            } else {
+                format!("{}", suggestion.name)
+            };
+
+            result.push(format);
         }
 
         Ok(result)
