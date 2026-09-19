@@ -47,6 +47,7 @@ pub struct ClientArgs {
     pub rating: Option<CliRating>,
     #[arg(value_enum, long, short, default_value_t=CliSort::Id, global=true)]
     pub sort: CliSort,
+    /// Zero-based index of page to fetch, using --limit as page size
     #[arg(long, short, default_value_t = 0, global = true)]
     pub page: u32,
     /// Get post by exact id, overriding all other search arguments
