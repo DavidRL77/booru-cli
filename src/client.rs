@@ -20,6 +20,7 @@ pub struct ClientConfig {
     pub rating: Option<CliRating>,
     pub sort: Sort,
     pub page: u32,
+    pub id: Option<u32>,
 }
 
 impl ClientConfig {
@@ -36,22 +37,14 @@ impl ClientConfig {
             rating: client_args.rating,
             sort: client_args.sort.into(),
             page: client_args.page,
+            id: client_args.id,
         })
-    }
-
-    fn get_required_credentials(&self) -> booru_rs::Result<&Credentials> {
-        match &self.credentials {
-            Some(credentials) => Ok(credentials),
-            None => Err(BooruError::Unauthorized(format!(
-                "Credentials required for {}.",
-                self.client
-            ))),
-        }
     }
 
     /// Matches the ClientType to fetch a list of posts from the appropriate client,
     /// mapping it to a dynamic list of posts
     pub async fn get_posts(&self) -> booru_rs::Result<Vec<Box<dyn Post>>> {
+        // Utility macro to reduce boilerplate
         macro_rules! configure_search {
             ($client:expr) => {{
                 let mut search = $client
@@ -73,35 +66,64 @@ impl ClientConfig {
         match self.client {
             ClientType::Safebooru => {
                 let client = safebooru::Client::builder().build()?;
-                let search = configure_search!(client);
+                
+                let posts = if let Some(id) = self.id {
+                    vec![client.post(id).await?]
+                } else {
+                    configure_search!(client).send().await?
+                };
 
-                Ok(box_posts(search.send().await?))
+                Ok(box_posts(posts))
             }
             ClientType::Gelbooru => {
                 let credentials = self.get_required_credentials()?;
                 let client = gelbooru::Client::builder()
                     .set_credentials(&credentials.api_key, &credentials.user_id)
                     .build()?;
-                let search = configure_search!(client);
 
-                Ok(box_posts(search.send().await?))
+                let posts = if let Some(id) = self.id {
+                    vec![client.post(id).await?]
+                } else {
+                    configure_search!(client).send().await?
+                };
+                
+                Ok(box_posts(posts))
             }
             ClientType::Rule34 => {
                 let credentials = self.get_required_credentials()?;
                 let client = rule34::Client::builder()
                     .set_credentials(&credentials.api_key, &credentials.user_id)
                     .build()?;
-                let search = configure_search!(client);
 
-                Ok(box_posts(search.send().await?))
+                let posts = if let Some(id) = self.id {
+                    vec![client.post(id).await?]
+                } else {
+                    configure_search!(client).send().await?
+                };
+                
+                Ok(box_posts(posts))
             }
             ClientType::Konachan => {
                 let client = konachan::Client::builder().build()?;
 
-                let search = configure_search!(client);
-
-                Ok(box_posts(search.send().await?))
+                let posts = if let Some(id) = self.id {
+                    vec![client.post(id).await?]
+                } else {
+                    configure_search!(client).send().await?
+                };
+                
+                Ok(box_posts(posts))
             }
+        }
+    }
+
+    fn get_required_credentials(&self) -> booru_rs::Result<&Credentials> {
+        match &self.credentials {
+            Some(credentials) => Ok(credentials),
+            None => Err(BooruError::Unauthorized(format!(
+                "Credentials required for {}.",
+                self.client
+            ))),
         }
     }
 }

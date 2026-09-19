@@ -56,7 +56,7 @@ pub enum ClientType {
 impl Display for ClientType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let name = format!("{:?}", self).to_lowercase();
-        return write!(f, "{}", name);
+        write!(f, "{}", name)
     }
 }
 
