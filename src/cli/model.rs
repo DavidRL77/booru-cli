@@ -65,6 +65,8 @@ impl Display for ClientType {
 pub enum CliRating {
     /// Nothing sexual, safe to watch in public
     Safe,
+    /// Same as Safe in all clients except Safebooru, where it's actually safer
+    General,
     /// No explicit sex, but may contain nudity
     Questionable,
     /// Sex
@@ -75,6 +77,7 @@ impl From<CliRating> for GelbooruRating {
     fn from(value: CliRating) -> Self {
         match value {
             CliRating::Safe => GelbooruRating::General,
+            CliRating::General => GelbooruRating::General,
             CliRating::Questionable => GelbooruRating::Questionable,
             CliRating::Explicit => GelbooruRating::Explicit,
         }
@@ -85,6 +88,7 @@ impl From<CliRating> for Rule34Rating {
     fn from(value: CliRating) -> Self {
         match value {
             CliRating::Safe => Rule34Rating::Safe,
+            CliRating::General => Rule34Rating::Safe,
             CliRating::Questionable => Rule34Rating::Questionable,
             CliRating::Explicit => Rule34Rating::Explicit,
         }
@@ -95,6 +99,7 @@ impl From<CliRating> for SafebooruRating {
     fn from(value: CliRating) -> Self {
         match value {
             CliRating::Safe => SafebooruRating::Safe,
+            CliRating::General => SafebooruRating::General,
             CliRating::Questionable => SafebooruRating::Questionable,
             CliRating::Explicit => SafebooruRating::Explicit,
         }
@@ -105,6 +110,7 @@ impl From<CliRating> for KonachanRating {
     fn from(value: CliRating) -> Self {
         match value {
             CliRating::Safe => KonachanRating::Safe,
+            CliRating::General => KonachanRating::Safe,
             CliRating::Questionable => KonachanRating::Questionable,
             CliRating::Explicit => KonachanRating::Explicit,
         }
