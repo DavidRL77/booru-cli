@@ -49,6 +49,9 @@ pub struct ClientArgs {
     pub sort: CliSort,
     #[arg(long, short, default_value_t = 0, global = true)]
     pub page: u32,
+    /// Get post by exact id, overriding all other search arguments
+    #[arg(long, value_delimiter = ',', global = true)]
+    pub id: Option<u32>,
     /// Path to api credentials in toml format
     #[arg(long, default_value=credentials_path().into_os_string(), global=true)]
     pub credentials: PathBuf,
@@ -224,7 +227,7 @@ impl Commands {
                     suggestion.post_count.unwrap_or(0)
                 )
             } else {
-                format!("{}", suggestion.name)
+                suggestion.name
             };
 
             result.push(format);
