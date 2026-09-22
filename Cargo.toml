@@ -18,3 +18,6 @@ serde = "1.0.229"
 serde_json = "1.0"
 tokio = { version = "1.53.1", features = ["rt-multi-thread", "macros"] }
 toml = "1.1.4"
+
+[target.'cfg(unix)'.dependencies]
+uzers = { version = "0.12.2", default-features = false }
