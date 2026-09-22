@@ -15,6 +15,9 @@ async fn main() -> anyhow::Result<ExitCode> {
     let cli = Cli::parse();
 
     let results = cli.command.execute().await?;
+    if results.is_empty() {
+        return Ok(ExitCode::SUCCESS);
+    }
 
     match cli.open {
         None => {
