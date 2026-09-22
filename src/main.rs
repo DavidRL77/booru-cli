@@ -2,6 +2,7 @@ mod cli;
 mod client;
 mod dirs;
 mod error;
+mod uzers;
 
 use std::process::{Command, ExitCode};
 
