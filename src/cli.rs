@@ -270,7 +270,8 @@ impl Commands {
             "tags": &post.tags().split(' ').collect::<Vec<_>>(),
             "score": &post.score(),
             "md5": &post.md5(),
-            "source": &post.source()
+            "source": &post.source(),
+            "rating": rating_to_string(post.rating())
         })
     }
 
@@ -280,4 +281,8 @@ impl Commands {
         // which is why I wrap the result in Ok
         Ok(ClientConfig::from_args(client_args)?.get_posts().await?)
     }
+}
+
+fn rating_to_string(rating: Option<booru_rs::Rating>) -> Option<String> {
+    rating.map(|r| format!("{:?}", r))
 }
