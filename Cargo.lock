@@ -94,8 +94,9 @@ dependencies = [
 
 [[package]]
 name = "booru-rs"
-version = "1.1.0"
-source = "git+https://github.com/ajiiisai/booru-rs#f645a6659c15d7bb501056f248508fb2997f2739"
+version = "2.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "43f7868b70af19dfb759fb3975d71f69f58be24346a27bc92bd6ce21972ecce0"
 dependencies = [
  "futures-core",
  "httpdate",
