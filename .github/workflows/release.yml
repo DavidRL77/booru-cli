@@ -4,6 +4,7 @@ on:
     tags: ['v*']
 jobs:
   publish:
+    if: ${{ github.repository_owner == 'DavidRL77' }}
     runs-on: ubuntu-latest
     permissions:
       id-token: write
