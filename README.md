@@ -20,7 +20,23 @@ These features are made with scripting and automation in mind so they can be pas
 > **Note:** Gelbooru urls can't be displayed directly and have to be downloaded first.
 
 ## Installation
-No official way to install just yet, but you can build it from source in the meantime.
+Go to the [latest release](https://github.com/DavidRL77/booru-cli/releases/latest) and download the correct archive for your operating system.
+
+Extract the archive and move the binary to a suitable location so it can be used from the command line.
+
+<details>
+<summary>Linux</summary>
+
+A common location for custom binaries in Linux is: `/usr/local/bin`
+
+</details>
+
+<details>
+<summary>Windows</summary>
+
+Place the binary in your folder of choice and [add the folder to your PATH](https://www.architectryan.com/2018/03/17/add-to-the-path-on-windows-10/)
+
+</details>
 
 ## Examples
 Print the url of a single, random image that:
