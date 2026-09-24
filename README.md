@@ -40,5 +40,5 @@ booru-cli download -t frieren -t real_life -T cosplay -s score -l 1
 
 Opening a fetched result using another program:
 ```
-timg $(booru-cli url -t pink_hair)
+booru-cli url -t pink_hair --open=timg
 ```
