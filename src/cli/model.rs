@@ -3,7 +3,7 @@ use std::{collections::HashMap, fmt::Display, path::Path};
 use crate::dirs;
 use anyhow::Context;
 use booru_rs::{
-    Sort, gelbooru::GelbooruRating, konachan::KonachanRating, rule34::Rule34Rating,
+    Post, Sort, gelbooru::GelbooruRating, konachan::KonachanRating, rule34::Rule34Rating,
     safebooru::SafebooruRating,
 };
 use clap::ValueEnum;
@@ -153,5 +153,72 @@ impl From<CliSort> for Sort {
             CliSort::Updated => Sort::Updated,
             CliSort::Random => Sort::Random,
         }
+    }
+}
+
+/// Dynamic wrapper for all post types that implements its own [Post].
+pub struct WrappedPost {
+    inner: Box<dyn Post + Sync>,
+}
+
+impl WrappedPost {
+    pub fn new<T: Post + Sync + 'static>(value: T) -> Self {
+        WrappedPost {
+            inner: Box::new(value),
+        }
+    }
+}
+
+impl Post for WrappedPost {
+    fn id(&self) -> u32 {
+        self.inner.id()
+    }
+
+    fn width(&self) -> u32 {
+        self.inner.width()
+    }
+
+    fn height(&self) -> Option<u32> {
+        self.inner.height()
+    }
+
+    fn file_url(&self) -> Option<&str> {
+        self.inner.file_url()
+    }
+
+    fn tags(&self) -> &str {
+        self.inner.tags()
+    }
+
+    fn score(&self) -> Option<i64> {
+        self.inner.score()
+    }
+
+    fn md5(&self) -> Option<&str> {
+        self.inner.md5()
+    }
+
+    fn source(&self) -> Option<&str> {
+        self.inner.source()
+    }
+
+    fn preview_url(&self) -> Option<&str> {
+        self.inner.preview_url()
+    }
+
+    fn sample_url(&self) -> Option<&str> {
+        self.inner.sample_url()
+    }
+
+    fn parent_id(&self) -> Option<u32> {
+        self.inner.parent_id()
+    }
+
+    fn tags_iter(&self) -> std::str::SplitWhitespace<'_> {
+        self.inner.tags_iter()
+    }
+
+    fn rating(&self) -> Option<booru_rs::prelude::Rating<'_>> {
+        self.inner.rating()
     }
 }
