@@ -1,5 +1,5 @@
-use std::path::PathBuf;
 use crate::uzers;
+use std::path::PathBuf;
 
 /// Application specific local configuration directory
 pub fn config_dir() -> PathBuf {
@@ -11,7 +11,7 @@ pub fn credentials_path() -> PathBuf {
 }
 
 /// Application specific temporary path, including a user-specific discriminator (only on unix)
-/// 
+///
 /// On unix-based systems, the user's id will be appended to the directory's name
 /// On non-unix systems, it will be appended with a 0
 pub fn temp_dir() -> PathBuf {
@@ -24,6 +24,10 @@ mod tests {
     #[cfg(unix)]
     fn temp_dir_contains_uid() {
         let dir = super::temp_dir();
-        assert!(dir.display().to_string().contains(&uzers::get_current_uid().to_string()))
+        assert!(
+            dir.display()
+                .to_string()
+                .contains(&uzers::get_current_uid().to_string())
+        )
     }
 }
