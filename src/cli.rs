@@ -1,6 +1,5 @@
 pub mod model;
 
-use core::time;
 use std::path::Path;
 use std::{format, path::PathBuf};
 
@@ -13,7 +12,7 @@ use clap::builder::NonEmptyStringValueParser;
 use clap::{ArgAction, Args, Parser, Subcommand};
 use serde_json::json;
 
-use crate::cli::model::{CliRating, CliSort, ClientType};
+use crate::cli::model::{CliRating, CliSort, ClientType, WrappedPost};
 
 type CommandResult = anyhow::Result<Vec<String>>;
 
@@ -76,6 +75,12 @@ pub enum Commands {
         /// Clear temp folder before downloading
         #[arg(long = "clear-temp")]
         clear: bool,
+
+        /// How many posts to download concurrently
+        ///
+        /// Higher number means faster download, but be careful with rate limits
+        #[arg(long, default_value_t = 4)]
+        concurrency: usize,
     },
     /// Get a JSON array of each post in JSON format
     Json {
@@ -114,7 +119,8 @@ impl Commands {
                 client_args,
                 destination,
                 clear,
-            } => Self::download(client_args, &destination, clear).await,
+                concurrency,
+            } => Self::download(client_args, &destination, clear, concurrency).await,
             Commands::Json {
                 client_args,
                 pretty,
@@ -144,28 +150,20 @@ impl Commands {
     }
 
     /// Download each post's file and return a list of its download paths
-    async fn download(client_args: ClientArgs, destination: &Path, clear: bool) -> CommandResult {
+    async fn download(client_args: ClientArgs, destination: &Path, clear: bool, concurrency: usize) -> CommandResult {
         if clear {
             Self::clear_temp().await?;
         }
 
-        let downloader = Downloader::with_client(
-            reqwest::ClientBuilder::new()
-                .timeout(time::Duration::from_secs(300))
-                .default_headers(referer_header(referer_url(client_args.client)))
-                .build()
-                .expect("Could not build HTTP client"),
-        );
+        let downloader =
+            Downloader::new().with_headers(referer_header(referer_url(client_args.client)));
 
         let posts = Self::get_posts(client_args).await?;
 
         let mut result: Vec<String> = Vec::new();
-        for post in posts {
-            if let Some(url) = post.file_url() {
-                let download_result = downloader.download_url(url, destination, None).await?;
-
-                result.push(download_result.path.display().to_string());
-            }
+        let download_results = downloader.download_posts(&posts, destination, concurrency).await;
+        for res in download_results {
+            result.push(res?.path.display().to_string());
         }
 
         Ok(result)
@@ -257,7 +255,7 @@ impl Commands {
     }
 
     /// Utility to convert a `Post` trait into a JSON `Value`
-    fn post_to_json(post: Box<dyn Post>) -> serde_json::Value {
+    fn post_to_json(post: impl Post) -> serde_json::Value {
         // No way to serialize a trait, so I'll just do it myself
         json!({
             "id": &post.id(),
@@ -276,7 +274,7 @@ impl Commands {
     }
 
     /// Utility function to convert `ClientArgs` -> `ClientConfig` and its posts
-    async fn get_posts(client_args: ClientArgs) -> anyhow::Result<Vec<Box<dyn Post>>> {
+    async fn get_posts(client_args: ClientArgs) -> anyhow::Result<Vec<WrappedPost>> {
         // Kinda weird, but I'm using '?' for implicit conversion for the error,
         // which is why I wrap the result in Ok
         Ok(ClientConfig::from_args(client_args)?.get_posts().await?)

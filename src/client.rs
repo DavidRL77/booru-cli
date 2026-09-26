@@ -1,6 +1,6 @@
 use crate::cli::{
     ClientArgs,
-    model::{CliRating, ClientType, Credentials},
+    model::{CliRating, ClientType, Credentials, WrappedPost},
 };
 
 use booru_rs::{
@@ -43,7 +43,7 @@ impl ClientConfig {
 
     /// Matches the ClientType to fetch a list of posts from the appropriate client,
     /// mapping it to a dynamic list of posts
-    pub async fn get_posts(&self) -> booru_rs::Result<Vec<Box<dyn Post>>> {
+    pub async fn get_posts(&self) -> booru_rs::Result<Vec<WrappedPost>> {
         // Utility macro to reduce boilerplate
         macro_rules! configure_search {
             ($client:expr) => {{
@@ -66,14 +66,14 @@ impl ClientConfig {
         match self.client {
             ClientType::Safebooru => {
                 let client = safebooru::Client::builder().build()?;
-                
+
                 let posts = if let Some(id) = self.id {
                     vec![client.post(id).await?]
                 } else {
                     configure_search!(client).send().await?
                 };
 
-                Ok(box_posts(posts))
+                Ok(wrap_posts(posts))
             }
             ClientType::Gelbooru => {
                 let credentials = self.get_required_credentials()?;
@@ -86,8 +86,8 @@ impl ClientConfig {
                 } else {
                     configure_search!(client).send().await?
                 };
-                
-                Ok(box_posts(posts))
+
+                Ok(wrap_posts(posts))
             }
             ClientType::Rule34 => {
                 let credentials = self.get_required_credentials()?;
@@ -100,8 +100,8 @@ impl ClientConfig {
                 } else {
                     configure_search!(client).send().await?
                 };
-                
-                Ok(box_posts(posts))
+
+                Ok(wrap_posts(posts))
             }
             ClientType::Konachan => {
                 let client = konachan::Client::builder().build()?;
@@ -111,8 +111,8 @@ impl ClientConfig {
                 } else {
                     configure_search!(client).send().await?
                 };
-                
-                Ok(box_posts(posts))
+
+                Ok(wrap_posts(posts))
             }
         }
     }
@@ -128,12 +128,15 @@ impl ClientConfig {
     }
 }
 
-fn box_posts<I, P>(posts: I) -> Vec<Box<dyn Post>>
+fn wrap_posts<I, P>(posts: I) -> Vec<WrappedPost>
 where
     I: IntoIterator<Item = P>,
-    P: Post + 'static,
+    P: Post + Sync + 'static,
 {
-    posts.into_iter().map(|post| Box::new(post) as _).collect()
+    posts
+        .into_iter()
+        .map(|post| WrappedPost::new(post) as _)
+        .collect()
 }
 
 pub fn referer_header(src: &'static str) -> HeaderMap {
